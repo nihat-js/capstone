@@ -5,20 +5,19 @@ import shutil
 
 # Configuration
 mysql_root_password = "rootpassword"
-mysql_database = "banking"
-mysql_user = "honeypotuser"
-mysql_password = "honeypotpass"
+mysql_database = "finance"
+mysql_user = "james"
+mysql_password = "james"
 mysql_port = 3306
 
-# Paths
-build_dir = "build/mysql_honeypot_build"
-sql_source_path = "../assets/sql/banking_Database.sql"
+build_dir = "build\mysql"
+sql_source_path = "..\\..\\assets\\sql\\banking_Database.sql"
 sql_dest_path = os.path.join(build_dir, "banking_Database.sql")
+
 
 os.makedirs(build_dir, exist_ok=True)
 os.makedirs("log", exist_ok=True)
 
-# Copy SQL file into build directory
 if not os.path.isfile(sql_source_path):
     raise FileNotFoundError(f"SQL dump file not found at {sql_source_path}")
 shutil.copy(sql_source_path, sql_dest_path)
@@ -60,7 +59,7 @@ subprocess.run([
     "mysql-honeypot"
 ], check=True)
 
-print(f"MySQL Honeypot running on port {mysql_port}. Logs will be saved in ./log/.")
+print(f"MySQL Honeypot running on port {mysql_port}. Logs will be")
 
 log_file_path = os.path.join("log", "mysql_container_logs.txt")
 
