@@ -24,10 +24,12 @@ RUN apt-get update && apt-get install -y vsftpd db-util
 """
 for user in users:
     dockerfile_content += f"""
-# Create user {user['username']} with non-writable home
+# Create user {user['username']}
 RUN useradd -m {user['username']} && \\
-    echo "{user['username']}:{user['password']}" | chpasswd && \\
-    chmod 555 /home/{user['username']}  # read & execute only
+    echo "{user['username']}:{user['username']}" | chpasswd && \\
+    mkdir -p /home/{user['username']}/ftp && \\
+    chown {user['username']}:{user['username']} /home/{user['username']}/ftp && \\
+    chmod 755 /home/{user['username']}/ftp
 """
 
 dockerfile_content += f"""
@@ -53,14 +55,16 @@ RUN echo "listen=YES" > /etc/vsftpd.conf && \\
     echo "use_localtime=YES" >> /etc/vsftpd.conf && \\
     echo "xferlog_enable=YES" >> /etc/vsftpd.conf && \\
     echo "connect_from_port_20=YES" >> /etc/vsftpd.conf && \\
-    echo "chroot_local_user=YES" >> /etc/vsftpd.conf && \\
-    echo "allow_writeable_chroot=YES" >> /etc/vsftpd.conf && \\
     echo "secure_chroot_dir=/var/run/vsftpd/empty" >> /etc/vsftpd.conf && \\
     echo "banner_file=/etc/issue.net" >> /etc/vsftpd.conf && \\
     echo "listen_port=21" >> /etc/vsftpd.conf
 
 # Create secure chroot dir
 RUN mkdir -p /var/run/vsftpd/empty && chmod 755 /var/run/vsftpd/empty
+
+# Debugging: Verify vsftpd.conf and permissions
+RUN cat /etc/vsftpd.conf && \\
+    ls -ld /home/james /home/james/ftp /home/test /home/test/ftp /home/ftp
 
 EXPOSE 21
 

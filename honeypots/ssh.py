@@ -1,7 +1,6 @@
 import os
 import subprocess
 import time
-import shutil
 
 # Configuration
 users = [
@@ -13,12 +12,14 @@ banner_text = "Welcome to my secure SSH server. Unauthorized access prohibited."
 
 # Setup directories
 os.makedirs("log", exist_ok=True)
-os.makedirs("honeypot_build", exist_ok=True)
+build_dir = "build/ssh_honeypot_build"
+os.makedirs(build_dir, exist_ok=True)
 
 # Create Dockerfile
 dockerfile_content = f"""
 FROM ubuntu:22.04
-RUN apt-get update && apt-get install -y openssh-server && \\
+
+RUN apt-get update && apt-get install -y openssh-server openssl && \\
     mkdir /var/run/sshd
 
 """
@@ -48,12 +49,14 @@ EXPOSE 22
 CMD ["/usr/sbin/sshd", "-D"]
 """
 
-with open("honeypot_build/Dockerfile", "w") as f:
+# Write Dockerfile
+dockerfile_path = os.path.join(build_dir, "Dockerfile")
+with open(dockerfile_path, "w") as f:
     f.write(dockerfile_content)
 
 # Build Docker image
-print("Building Docker image...")
-subprocess.run(["docker", "build", "-t", "ssh-honeypot", "."], cwd="honeypot_build", check=True)
+print("Building SSH honeypot Docker image...")
+subprocess.run(["docker", "build", "-t", "ssh-honeypot", "."], cwd=build_dir, check=True)
 
 # Remove any existing container
 subprocess.run(
@@ -63,7 +66,7 @@ subprocess.run(
 )
 
 # Start Docker container
-print("Starting honeypot container...")
+print("Starting SSH honeypot container...")
 subprocess.run([
     "docker", "run", "-d",
     "--name", "ssh_honeypot_container",
@@ -71,12 +74,12 @@ subprocess.run([
     "ssh-honeypot"
 ], check=True)
 
-print(f"Honeypot running on port {ssh_port}. Logs will be saved in ./log/.")
+print(f"SSH Honeypot running on port {ssh_port}. Logs will be saved in ./log/.")
 
 # Log collection loop
-log_file_path = "../logs/container_logs.txt"
+log_file_path = "../logs/ssh_container_logs.txt"
 
-print("Tailing container logs...")
+print("Tailing SSH container logs... Press Ctrl+C to stop.")
 with open(log_file_path, "wb") as log_file:
     log_process = subprocess.Popen(
         ["docker", "logs", "-f", "ssh_honeypot_container"],
@@ -88,6 +91,6 @@ try:
     while True:
         time.sleep(5)
 except KeyboardInterrupt:
-    print("Stopping honeypot...")
+    print("\nStopping SSH honeypot...")
     log_process.terminate()
     subprocess.run(["docker", "rm", "-f", "ssh_honeypot_container"])
