@@ -1,0 +1,106 @@
+TOP SECRET - CUSTOMER DATABASE
+
+SecureBank Corporation  
+Customer Relations Department
+
+HIGH-VALUE CUSTOMER INFORMATION
+AUTHORIZED PERSONNEL ONLY
+
+==================================================
+VIP CUSTOMER ACCOUNTS
+==================================================
+
+Customer: Anderson, Robert J.
+Account Number: VIP-001-789456
+SSN: 555-89-1234
+Balance: $2,847,593.21
+Phone: +1-555-0123
+Address: 1425 Executive Blvd, Beverly Hills, CA 90210
+Credit Score: 820
+Notes: Diamond tier customer, private banking
+
+Customer: Wilson, Margaret K.  
+Account Number: VIP-002-456789
+SSN: 555-12-9876
+Balance: $1,923,847.65
+Phone: +1-555-0456
+Address: 890 Park Avenue, New York, NY 10075
+Credit Score: 815
+Notes: Legacy customer, trust fund management
+
+Customer: Thompson, James W.
+Account Number: VIP-003-123654
+SSN: 555-45-6789
+Balance: $3,156,923.84
+Phone: +1-555-0789
+Address: 2100 Ocean Drive, Miami, FL 33139
+Credit Score: 835
+Notes: International wire transfers, crypto investments
+
+==================================================
+CORPORATE ACCOUNTS
+==================================================
+
+Company: TechCorp Industries
+Account Number: CORP-501-987123  
+EIN: 12-3456789
+Balance: $15,847,293.12
+Primary Contact: CEO - Michael Rodriguez
+Phone: +1-555-TECH (8324)
+Wire Routing: 123456789
+
+Company: Global Investments LLC
+Account Number: CORP-502-654321
+EIN: 98-7654321  
+Balance: $42,156,847.93
+Primary Contact: CFO - Sarah Davis
+Phone: +1-555-INVEST
+Wire Routing: 987654321
+
+==================================================
+GOVERNMENT CONTRACTS
+==================================================
+
+Agency: Department of Defense
+Contract ID: DOD-2024-SECURE-001
+Account: GOV-701-DOD-001
+Classification Level: SECRET
+Annual Value: $50,000,000
+Contact: Colonel Patricia Hayes
+Secure Phone: +1-703-555-DEFENSE
+
+==================================================
+SUSPECTED FRAUD ACCOUNTS
+==================================================
+
+Alert Level: HIGH
+Account: 445-889-7123
+Name: Johnson, Mark (Suspected Identity Theft)
+Last Activity: Multiple failed login attempts
+Source IPs: 185.220.102.8, 94.102.49.193
+Action: Account frozen, FBI notified
+
+Alert Level: MEDIUM  
+Account: 778-223-9945
+Name: Various fake names used
+Pattern: Small deposits followed by large withdrawals
+Status: Under investigation
+
+==================================================
+INTERNAL NOTES
+==================================================
+
+Database Access:
+Server: customer-db-prod.securebank.internal
+Username: customer_admin
+Password: CustomerData2024!
+Backup Server: customer-db-backup.securebank.internal
+
+Report Generated: December 20, 2024
+Classification: TOP SECRET
+Clearance Required: Level 3 or above
+Next Review: December 27, 2024
+
+WARNING: This document contains Personally Identifiable Information (PII)
+and financial data protected under federal regulations. Unauthorized 
+disclosure may result in criminal prosecution.

@@ -1,0 +1,38 @@
+{
+  "cowrie_1751009124": {
+    "type": "cowrie",
+    "name": "Cowrie Honeypot",
+    "port": 2222,
+    "username": "admin",
+    "password": "password",
+    "anonymous_login": false,
+    "banner": "Welcome to Ubuntu 18.04.3 LTS (GNU/Linux 4.15.0-72-generic x86_64)",
+    "template": "default",
+    "enable_logging": true,
+    "enable_recording": false,
+    "alert_email": "",
+    "alert_webhook": "",
+    "log_location": "local",
+    "retention_days": 30,
+    "tags": [],
+    "created_at": "2025-06-27T11:25:24.396926"
+  },
+  "cowrie_1751009134": {
+    "type": "cowrie",
+    "name": "Cowrie Honeypot",
+    "port": 22,
+    "username": "admin",
+    "password": "password",
+    "anonymous_login": false,
+    "banner": "Welcome to Ubuntu 18.04.3 LTS (GNU/Linux 4.15.0-72-generic x86_64)",
+    "template": "default",
+    "enable_logging": true,
+    "enable_recording": false,
+    "alert_email": "",
+    "alert_webhook": "",
+    "log_location": "local",
+    "retention_days": 30,
+    "tags": [],
+    "created_at": "2025-06-27T11:25:34.461226"
+  }
+}

@@ -1,0 +1,36 @@
+SecureBank-SW01>
+
+SecureBank Network Infrastructure
+Cisco Catalyst 2960-X Series Switch
+IOS Version: 15.2(7)E3
+
+====================================
+AUTHORIZED ACCESS ONLY
+====================================
+
+This device is property of SecureBank Corporation.
+Unauthorized access is prohibited and will be prosecuted
+to the full extent of the law.
+
+All commands and activities are logged.
+
+Switch Information:
+- Model: WS-C2960X-48FPD-L
+- Location: Data Center Floor 3, Rack 15A
+- Management IP: 192.168.100.15
+- SNMP Community: SecureBank_RO
+- Contact: netadmin@securebank.com
+
+VLAN Configuration:
+- VLAN 10: Management (192.168.10.0/24)
+- VLAN 20: Production (192.168.20.0/24)  
+- VLAN 30: Guest Network (192.168.30.0/24)
+- VLAN 99: Quarantine (192.168.99.0/24)
+
+For technical support: +1-555-NETWORK
+
+Type '?' for help with commands.
+
+User Access Verification
+
+Username:

@@ -1,0 +1,33 @@
+220 prod-ftp.securebank.internal FTP server ready
+Welcome to SecureBank File Transfer Service
+
+=====================================
+AUTHORIZED ACCESS ONLY
+=====================================
+
+This FTP server contains sensitive financial documents
+and customer data. All file transfers are logged and
+monitored for security purposes.
+
+Server Information:
+- Server: ProFTPD 1.3.7a Server
+- Location: Primary Data Center
+- Administrator: ftpadmin@securebank.com
+- Support: +1-555-FTP-HELP
+
+Available directories:
+/customer_files     - Customer document archive
+/financial_reports  - Quarterly financial data  
+/compliance        - Regulatory compliance docs
+/backups           - Database backup files
+/temp              - Temporary file storage
+
+Transfer limits:
+- Max file size: 100MB
+- Session timeout: 30 minutes  
+- Max concurrent connections: 10
+
+For technical assistance, contact the IT Help Desk.
+
+Type 'help' for available commands.
+Ready for authentication.

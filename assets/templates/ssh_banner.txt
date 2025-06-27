@@ -1,0 +1,23 @@
+# SSH Banner Template for Cowrie Honeypot
+SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.1
+
+Welcome to SecureBank Production Server
+=======================================
+
+WARNING: This system is for authorized personnel only.
+All activities are monitored and logged.
+Unauthorized access is strictly prohibited.
+
+Last login: Mon Dec 20 08:45:32 2024 from 192.168.1.100
+
+System Information:
+- Hostname: prod-web-01.securebank.internal  
+- OS: Ubuntu 20.04.6 LTS
+- Kernel: Linux 5.4.0-150-generic
+- Uptime: 127 days, 14 hours, 32 minutes
+- Load: 0.15, 0.12, 0.08
+
+For technical support, contact: support@securebank.com
+Emergency contact: +1-555-SECURITY
+
+[root@prod-web-01 ~]#

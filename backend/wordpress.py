@@ -35,7 +35,6 @@ services:
       WORDPRESS_DB_USER: {MYSQL_USER}
       WORDPRESS_DB_PASSWORD: {MYSQL_PASSWORD}
       WORDPRESS_DB_NAME: {MYSQL_DATABASE}
-
 volumes:
   db_data:
 """
