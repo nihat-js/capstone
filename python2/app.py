@@ -7,8 +7,6 @@ from functools import wraps
 
 app = Flask(__name__)
 
-
-
 services = []
 
 def with_json(f):
