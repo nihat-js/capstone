@@ -3,11 +3,9 @@ import uuid
 import os
 
 def start_postgres(config):
-    port = config["port"]
-    container_name = config["container_name"] or "postgres"
+    port,name = config.get("port"), config.get("name")
     postgres_password = config.get("password", "postgres")
-
-    container_name += f"_{port}_{str(uuid.uuid4())[:8]}"
+    name += f"_{port}_{str(uuid.uuid4())[:8]}"
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
     pg_log_dir = os.path.join(script_dir, "postgres_logs")
@@ -27,7 +25,7 @@ log_statement = 'all'
 
     docker_cmd = [
         "docker", "run", "-d",
-        "--name", container_name,
+        "--name", name,
         "-e", f"POSTGRES_PASSWORD={postgres_password}",
         "-p", f"{port}:5432",
         "-v", f"{pg_log_dir}:/var/log/postgresql",
@@ -38,24 +36,23 @@ log_statement = 'all'
 
     try:
         result = subprocess.run(docker_cmd, check=True, capture_output=True, text=True)
-        container_id = result.stdout.strip()
+        id = result.stdout.strip()
         print(f"✅ PostgreSQL running on port {port}")
-        print(f"📦 Container name: {container_name}")
-        print(f"🔑 Container ID: {container_id}")
+        print(f"📦 Container name: {name}")
+        print(f"🔑 Container ID: {id}")
         print(f"🔐 Password: {postgres_password}")
         print(f"📄 Logs will be written to: {pg_log_dir}")
-        return container_id
+        return id
     except subprocess.CalledProcessError as e:
         print("❌ Failed to start PostgreSQL")
         print(f"🔧 Error Message: {e.stderr.strip()}")
         return None
 
 # Example usage:
-config = {
-    "container_name": "postgres",
-    "port": 5433,
-    "password": "securepass123"
-}
-
-container_id = start_postgres(config)
-print(f"Container ID: {container_id}")
+# config = {
+#     "container_name": "postgres",
+#     "port": 5433,
+#     "password": "securepass123"
+# }
+# container_id = start_postgres(config)
+# print(f"Container ID: {container_id}")
