@@ -41,3 +41,5 @@
 2025-06-28 21:24:58.360 GMT [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
 2025-06-28 21:24:58.716 GMT [64] LOG:  database system was shut down at 2025-06-28 21:24:57 GMT
 2025-06-28 21:24:58.864 GMT [1] LOG:  database system is ready to accept connections
+2025-06-28 21:29:58.694 GMT [62] LOG:  checkpoint starting: time
+2025-06-28 21:30:03.720 GMT [62] LOG:  checkpoint complete: wrote 46 buffers (0.3%); 0 WAL file(s) added, 0 removed, 0 recycled; write=4.436 s, sync=0.340 s, total=5.027 s; sync files=11, longest=0.100 s, average=0.031 s; distance=269 kB, estimate=269 kB; lsn=0/15286B8, redo lsn=0/1528660
