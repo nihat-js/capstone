@@ -2,20 +2,21 @@
 
 import { useState, useEffect } from 'react'
 import styled from 'styled-components'
-import { 
-  Shield, 
-  Plus, 
-  Server, 
-  Play, 
-  Activity, 
-  Target, 
-  ChevronDown, 
+import {
+  Shield,
+  Plus,
+  Server,
+  Play,
+  Activity,
+  Target,
+  ChevronDown,
   ChevronUp,
   Search
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { HoneypotCard } from "./components/HoneypotCard"
 import { StatsCard } from './components/StatsCard'
+import { CreateHoneypotModal } from './components/CreateHoneypotModal'
 import { LogsModal } from './components/LogsModal'
 import { ConfigurationModal } from './components/ConfigurationModal'
 import { generateFakeHoneypots, generateFakeStats, generateFakeHoneypotTypes } from './utils/fakeData'
@@ -41,127 +42,14 @@ export default function Dashboard() {
   const fakeStats = generateFakeStats(fakeHoneypots)
   const fakeTypes = generateFakeHoneypotTypes()
 
-  // Available honeypot services - prioritize ssh, http, ftp
-
-
   useEffect(() => {
-    // Use fake data for demo
     setHoneypots(fakeHoneypots)
     setStats(fakeStats)
     setHoneypotTypes(fakeTypes)
     setLoading(false)
   }, [])
-  const API = 'http://localhost:5000/api/'
-  // const loadData = async () => {
-  //   try {
-  //     const response = await fetch(API + "honeypots")
-  //     const data = await response.json()
 
-  //     if (data.success) {
-  //       setHoneypots(Object.values(data.data.configs))
-  //       setRunningHoneypots(data.data.running)
-  //       setStats(data.data.statistics)
-  //     }
-  //   } catch (error) {
-  //     toast.error('Failed to load honeypots. Make sure the Flask API is running.')
-  //     console.error('Error loading honeypots:', error)
-  //   } finally {
-  //     setLoading(false)
-  //   }
-  // }
-
-  // const loadHoneypotTypes = async () => {
-  //   try {
-  //     const response = await fetch('/api/honeypot-types')
-  //     const data = await response.json()
-
-  //     if (data.success) {
-  //       setHoneypotTypes(data.data)
-  //     }
-  //   } catch (error) {
-  //     console.error('Error loading honeypot types:', error)
-  //   }
-  // }
-
-  // const handleStartHoneypot = async (id) => {
-  //   try {
-  //     const response = await fetch('http://localhost:5000/api/ssh/start', {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify({ config_id: id })
-  //     })
-  //     const data = await response.json()
-
-  //     if (data.success) {
-  //       toast.success('Honeypot started successfully!')
-  //       loadData()
-  //     } else {
-  //       toast.error(data.error || 'Failed to start honeypot')
-  //     }
-  //   } catch (error) {
-  //     toast.error('Failed to start honeypot. Make sure the Flask API is running.')
-  //     console.error('Error starting honeypot:', error)
-  //   }
-  // }
-
-  // const handleStopHoneypot = async (id) => {
-  //   try {
-  //     const response = await fetch('http://localhost:5000/api/ssh/stop', {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify({ config_id: id })
-  //     })
-  //     const data = await response.json()
-
-  //     if (data.success) {
-  //       toast.success('Honeypot stopped successfully!')
-  //       loadData()
-  //     } else {
-  //       toast.error(data.error || 'Failed to stop honeypot')
-  //     }
-  //   } catch (error) {
-  //     toast.error('Failed to stop honeypot. Make sure the Flask API is running.')
-  //     console.error('Error stopping honeypot:', error)
-  //   }
-  // }
-
-  // const handleDeleteHoneypot = async (id) => {
-  //   if (!confirm('Are you sure you want to delete this honeypot? This action cannot be undone.')) {
-  //     return
-  //   }
-
-  //   try {
-  //     const response = await fetch(`/api/honeypots/${id}`, {
-  //       method: 'DELETE'
-  //     })
-  //     const data = await response.json()
-
-  //     if (data.success) {
-  //       toast.success('Honeypot deleted successfully!')
-  //       loadData()
-  //     } else {
-  //       toast.error(data.error || 'Failed to delete honeypot')
-  //     }
-  //   } catch (error) {
-  //     toast.error('Failed to delete honeypot')
-  //     console.error('Error deleting honeypot:', error)
-  //   }
-  // }
-
-  // const handleViewLogs = (id) => {
-  //   setSelectedHoneypot(id)
-  //   setShowLogsModal(true)
-  // }
-
-  // const handleCreateHoneypot = () => {
-  //   setShowCreateModal(false)
-  //   loadData()
-  // }
-
+  // Event handlers
   const handleServiceClick = (service) => {
     setSelectedService(service)
     setShowConfigModal(true)
@@ -169,241 +57,207 @@ export default function Dashboard() {
 
   const handleHoneypotCreated = () => {
     setShowCreateModal(false)
-    // Refresh data in real implementation
   }
 
-  // Filter services based on search term
+  // Filter functions
   const filteredServices = availableServices.filter(service =>
     service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     service.description.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  // Filter honeypots based on search term
   const filteredHoneypots = honeypots.filter(honeypot =>
     honeypot.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     honeypot.type?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const renderDashboard = () => {
-    if (loading) {
+  // Component render functions
+  const renderHeader = () => (
+    <DashboardHeader>
+      <HeaderLeft>
+        <HeaderTitle>Dashboard</HeaderTitle>
+        <HeaderSubtitle>Monitor and manage your honeypot infrastructure</HeaderSubtitle>
+      </HeaderLeft>
+    </DashboardHeader>
+  )
+
+  const renderSearchBar = () => (
+    <SearchContainer>
+      <SearchWrapper>
+        <Search size={20} />
+        <SearchInput
+          type="text"
+          placeholder="Search services and honeypots..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </SearchWrapper>
+    </SearchContainer>
+  )
+
+  const renderStatsGrid = () => (
+    <StatsGrid>
+      <StatsCard title="Total Honeypots" value={stats.total} icon={Server} color="blue" />
+      <StatsCard title="Running" value={stats.running} icon={Play} color="green" />
+      <StatsCard title="Connections Today" value={stats.connectionsToday} icon={Activity} color="orange" />
+      <StatsCard title="Attacks Blocked" value={stats.attacksBlocked} icon={Shield} color="red" />
+    </StatsGrid>
+  )
+
+  const renderServiceCard = (service) => (
+    <ServiceCard key={service.id} onClick={() => handleServiceClick(service)}>
+      <ServiceHeader>
+        <ServiceIcon>
+          <service.icon size={24} />
+        </ServiceIcon>
+        <ServiceInfo>
+          <ServiceName>{service.name}</ServiceName>
+          <ServiceDescription>{service.description}</ServiceDescription>
+        </ServiceInfo>
+      </ServiceHeader>
+      <ServiceDetails>
+        <ServiceFeature>
+          <Shield size={16} />
+          {service.security}
+        </ServiceFeature>
+        <ServiceFeature>
+          <Activity size={16} />
+          {service.monitoring}
+        </ServiceFeature>
+        <ServiceFeature>
+          <Target size={16} />
+          {service.attackTypes}
+        </ServiceFeature>
+      </ServiceDetails>
+    </ServiceCard>
+  )
+
+  const renderServicesSection = () => {
+    const displayedServices = showAllServices ? filteredServices : filteredServices.slice(0, 3)
+    
+    return (
+      <ServicesSection>
+        <SectionHeader>
+          <SectionTitle>
+            <Server size={20} />
+            Create Honeypot
+          </SectionTitle>
+          <SectionSubtitle>
+            Choose a service to configure and deploy your honeypot
+          </SectionSubtitle>
+        </SectionHeader>
+
+        <ServicesGrid>
+          {displayedServices.map(renderServiceCard)}
+        </ServicesGrid>
+
+        {filteredServices.length > 3 && (
+          <ShowMoreButton onClick={() => setShowAllServices(!showAllServices)}>
+            {showAllServices ? (
+              <>
+                <ChevronUp size={16} />
+                Show Less
+              </>
+            ) : (
+              <>
+                <ChevronDown size={16} />
+                Show All ({filteredServices.length - 3} more)
+              </>
+            )}
+          </ShowMoreButton>
+        )}
+      </ServicesSection>
+    )
+  }
+
+  const renderHoneypotCard = (honeypot) => (
+    <HoneypotCard
+      key={honeypot.id}
+      honeypot={{
+        ...honeypot,
+        status: honeypot.status,
+        created_at: honeypot.created_at || honeypot.created
+      }}
+      honeypotType={honeypotTypes[honeypot.type]}
+      onStart={() => console.log('Start honeypot:', honeypot.id)}
+      onStop={() => console.log('Stop honeypot:', honeypot.id)}
+      onDelete={() => console.log('Delete honeypot:', honeypot.id)}
+      onViewLogs={() => console.log('View logs:', honeypot.id)}
+      onConfigure={() => handleServiceClick(availableServices.find(s => s.type === honeypot.type))}
+    />
+  )
+
+  const renderHoneypotsSection = () => {
+    if (filteredHoneypots.length === 0) return null
+
+    const displayedHoneypots = showAllHoneypots ? filteredHoneypots : filteredHoneypots.slice(0, 6)
+    
+    return (
+      <HoneypotsSection>
+        <SectionHeader>
+          <SectionTitle>
+            <Shield size={20} />
+            Active Honeypots
+          </SectionTitle>
+          <SectionSubtitle>
+            {showAllHoneypots 
+              ? `Showing all ${filteredHoneypots.length}` 
+              : `Showing ${Math.min(6, filteredHoneypots.length)} of ${filteredHoneypots.length}`} honeypots
+          </SectionSubtitle>
+        </SectionHeader>
+
+        <HoneypotsGrid>
+          {displayedHoneypots.map(renderHoneypotCard)}
+        </HoneypotsGrid>
+
+        {filteredHoneypots.length > 6 && (
+          <ShowMoreButton onClick={() => setShowAllHoneypots(!showAllHoneypots)}>
+            {showAllHoneypots ? (
+              <>
+                <ChevronUp size={16} />
+                Show Less
+              </>
+            ) : (
+              <>
+                <ChevronDown size={16} />
+                Show More ({filteredHoneypots.length - 6} more)
+              </>
+            )}
+          </ShowMoreButton>
+        )}
+      </HoneypotsSection>
+    )
+  }
+
+  const renderEmptyStates = () => {
+    if (filteredHoneypots.length === 0 && honeypots.length > 0) {
       return (
-        <LoadingContainer>
-          <LoadingSpinner />
-        </LoadingContainer>
+        <EmptyState>
+          <Search size={48} />
+          <EmptyTitle>No honeypots found</EmptyTitle>
+          <EmptyDescription>Try adjusting your search terms.</EmptyDescription>
+        </EmptyState>
       )
     }
 
-    const displayedServices = showAllServices ? filteredServices : filteredServices.slice(0, 3)
-    const displayedHoneypots = showAllHoneypots ? filteredHoneypots : filteredHoneypots.slice(0, 6)
+    if (honeypots.length === 0) {
+      return (
+        <EmptyState>
+          <Shield size={48} />
+          <EmptyTitle>No honeypots</EmptyTitle>
+          <EmptyDescription>Get started by creating your first honeypot.</EmptyDescription>
+          <EmptyButton onClick={() => setShowCreateModal(true)}>
+            <Plus size={16} />
+            Create Honeypot
+          </EmptyButton>
+        </EmptyState>
+      )
+    }
 
-    return (
-      <>
-        {/* Header */}
-        <DashboardHeader>
-          <HeaderLeft>
-            <HeaderTitle>Dashboard</HeaderTitle>
-            <HeaderSubtitle>Monitor and manage your honeypot infrastructure</HeaderSubtitle>
-          </HeaderLeft>
-          {/* <HeaderActions>
-            <CreateButton onClick={() => setShowCreateModal(true)}>
-              <Plus size={16} />
-              <span>Create Honeypot</span>
-            </CreateButton>
-          </HeaderActions> */}
-        </DashboardHeader>
-
-        {/* Search Bar */}
-        <SearchContainer>
-          <SearchWrapper>
-            <Search size={20} />
-            <SearchInput
-              type="text"
-              placeholder="Search services and honeypots..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </SearchWrapper>
-        </SearchContainer>
-
-        {/* Statistics Overview */}
-        <StatsGrid>
-          <StatsCard
-            title="Total Honeypots"
-            value={stats.total}
-            icon={Server}
-            color="blue"
-          />
-          <StatsCard
-            title="Running"
-            value={stats.running}
-            icon={Play}
-            color="green"
-          />
-          <StatsCard
-            title="Connections Today"
-            value={stats.connectionsToday}
-            icon={Activity}
-            color="orange"
-          />
-          <StatsCard
-            title="Attacks Blocked"
-            value={stats.attacksBlocked}
-            icon={Shield}
-            color="red"
-          />
-        </StatsGrid>
-
-        {/* Available Services Section */}
-        <ServicesSection>
-          <SectionHeader>
-            <SectionTitle>
-              <Server size={20} />
-              Create Honeypot
-            </SectionTitle>
-            <SectionSubtitle>
-              Choose a service to configure and deploy your honeypot
-            </SectionSubtitle>
-          </SectionHeader>
-
-          <ServicesGrid>
-            {displayedServices.map((service) => (
-              <ServiceCard key={service.id} onClick={() => handleServiceClick(service)}>
-                <ServiceHeader>
-                  <ServiceIcon>
-                    <service.icon size={24} />
-                  </ServiceIcon>
-                  <ServiceInfo>
-                    <ServiceName>{service.name}</ServiceName>
-                    <ServiceDescription>{service.description}</ServiceDescription>
-                  </ServiceInfo>
-                </ServiceHeader>
-
-                <ServiceDetails>
-                  <ServiceFeature>
-                    <Shield size={16} />
-                    {service.security}
-                  </ServiceFeature>
-                  <ServiceFeature>
-                    <Activity size={16} />
-                    {service.monitoring}
-                  </ServiceFeature>
-                  <ServiceFeature>
-                    <Target size={16} />
-                    {service.attackTypes}
-                  </ServiceFeature>
-                </ServiceDetails>
-              </ServiceCard>
-            ))}
-          </ServicesGrid>
-
-          {filteredServices.length > 3 && (
-            <ShowMoreButton onClick={() => setShowAllServices(!showAllServices)}>
-              {showAllServices ? (
-                <>
-                  <ChevronUp size={16} />
-                  Show Less
-                </>
-              ) : (
-                <>
-                  <ChevronDown size={16} />
-                  Show All ({filteredServices.length - 3} more)
-                </>
-              )}
-            </ShowMoreButton>
-          )}
-        </ServicesSection>
-
-        {/* Active Honeypots Section - Only show if there are honeypots */}
-        {filteredHoneypots.length > 0 && (
-          <HoneypotsSection>
-            <SectionHeader>
-              <SectionTitle>
-                <Shield size={20} />
-                Active Honeypots
-              </SectionTitle>
-              <SectionSubtitle>
-                {showAllHoneypots ? `Showing all ${filteredHoneypots.length}` : `Showing ${Math.min(6, filteredHoneypots.length)} of ${filteredHoneypots.length}`} honeypots
-              </SectionSubtitle>
-            </SectionHeader>
-
-            <HoneypotsGrid>
-              {displayedHoneypots.map((honeypot) => (
-                <HoneypotCard
-                  key={honeypot.id}
-                  honeypot={{
-                    ...honeypot,
-                    status: honeypot.status,
-                    created_at: honeypot.created_at || honeypot.created
-                  }}
-                  honeypotType={honeypotTypes[honeypot.type]}
-                  onStart={() => handleStartHoneypot(honeypot.id)}
-                  onStop={() => handleStopHoneypot(honeypot.id)}
-                  onDelete={() => handleDeleteHoneypot(honeypot.id)}
-                  onViewLogs={() => handleViewLogs(honeypot.id)}
-                  onConfigure={() => handleServiceClick(availableServices.find(s => s.type === honeypot.type))}
-                />
-              ))}
-            </HoneypotsGrid>
-
-            {filteredHoneypots.length > 6 && (
-              <ShowMoreButton onClick={() => setShowAllHoneypots(!showAllHoneypots)}>
-                {showAllHoneypots ? (
-                  <>
-                    <ChevronUp size={16} />
-                    Show Less
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown size={16} />
-                    Show More ({filteredHoneypots.length - 6} more)
-                  </>
-                )}
-              </ShowMoreButton>
-            )}
-          </HoneypotsSection>
-        )}
-
-        {filteredHoneypots.length === 0 && honeypots.length > 0 && (
-          <EmptyState>
-            <Search size={48} />
-            <EmptyTitle>No honeypots found</EmptyTitle>
-            <EmptyDescription>Try adjusting your search terms.</EmptyDescription>
-          </EmptyState>
-        )}
-
-        {honeypots.length === 0 && (
-          <EmptyState>
-            <Shield size={48} />
-            <EmptyTitle>No honeypots</EmptyTitle>
-            <EmptyDescription>Get started by creating your first honeypot.</EmptyDescription>
-            <EmptyButton onClick={() => setShowCreateModal(true)}>
-              <Plus size={16} />
-              Create Honeypot
-            </EmptyButton>
-          </EmptyState>
-        )}
-      </>
-    )
+    return null
   }
 
-  if (loading) {
-    return (
-      <PageContent>
-        <LoadingContainer>
-          <LoadingSpinner />
-        </LoadingContainer>
-      </PageContent>
-    )
-  }
-
-  return (
+  const renderModals = () => (
     <>
-      {/* Page Content */}
-      <PageContent>
-        {renderDashboard()}
-      </PageContent>
-
-      {/* Modals */}
       {showCreateModal && (
         <CreateHoneypotModal
           honeypotTypes={honeypotTypes}
@@ -427,6 +281,30 @@ export default function Dashboard() {
           onClose={() => setShowLogsModal(false)}
         />
       )}
+    </>
+  )
+
+  if (loading) {
+    return (
+      <PageContent>
+        <LoadingContainer>
+          <LoadingSpinner />
+        </LoadingContainer>
+      </PageContent>
+    )
+  }
+
+  return (
+    <>
+      <PageContent>
+        {renderHeader()}
+        {renderSearchBar()}
+        {renderStatsGrid()}
+        {renderServicesSection()}
+        {renderHoneypotsSection()}
+        {renderEmptyStates()}
+      </PageContent>
+      {renderModals()}
     </>
   )
 }
