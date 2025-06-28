@@ -1,11 +1,22 @@
 from flask import Flask, request, jsonify
 import postgres
 import subprocess
+import mysql
 
 app = Flask(__name__)
 
 
 services = []
+
+
+DOCKER_SERVICES = {
+  "postgres" : postgres.start,
+  "mysql" : mysql.start,
+}
+
+@app.route('/services', methods=['GET'])
+def list_services():
+    return jsonify(services), 200
 
 
 @app.route('/services/start', methods=['POST'])
@@ -15,12 +26,20 @@ def start_service():
     name,port = config.get("name"), config.get("port")
     if name is None or port is None:
         return jsonify({"error": "Name and port is required"}), 400
-
+      
     container_id = None
-    if name == 'postgres':
-        container_id = postgres.start_postgres(config)
+    
+    if name.lower() in DOCKER_SERVICES:
+        try:
+            container_id = DOCKER_SERVICES[name.lower()](config)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    
+    # if ["postgres", "mysql", "redis", "mongodb"].count(name)  > 0:
+    # if name == 'postgres':
+    #     container_id = postgres.start(config)
     # elif name == 'mysql':
-    #     container_id = mysql.start_mysql(config)
+    #     container_id = mysql.start(config)
     # elif name == 'redis':
     #     container_id = redis.start_redis(config)
     # elif name == 'mongodb':

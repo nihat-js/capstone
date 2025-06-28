@@ -1,15 +1,16 @@
 import subprocess
 import uuid
 
-def start_mysql(config):
-    port, container_name = config["port"], config["container_name"]
+def start(config):
+    port, name = config["port"], config["name"]
     mysql_root_password = config.get("root_password", "root")  # Default root password
-    container_name = container_name if container_name else "mysql"
-    container_name += "_" + str(port) + "_" + str(uuid.uuid4())[:8]
+    name = name if name else "mysql"
+    name += "_" + str(port) + "_" + str(uuid.uuid4())[:8]
+    print("comes to here")
     
     docker_cmd = [
         "docker", "run", "-d",
-        "--name", container_name,
+        "--name", name,
         "-e", f"MYSQL_ROOT_PASSWORD={mysql_root_password}",
         "-p", f"{port}:3306",
         "mysql:latest"
@@ -19,7 +20,7 @@ def start_mysql(config):
         result = subprocess.run(docker_cmd, check=True, capture_output=True, text=True)
         container_id = result.stdout.strip()
         print(f"✅ MySQL running on port {port}")
-        print(f"📦 Container name: {container_name}")
+        print(f"📦 Container name: {name}")
         print(f"🔑 Container ID: {container_id}")
         print(f"🔐 Root password: {mysql_root_password}")
         return container_id
@@ -29,11 +30,10 @@ def start_mysql(config):
         return None
 
 # Example usage:
-config = {
-    "container_name": "mysql",
-    "port": 3307,
-    "root_password": "securepass123"
-}
-
-container_id = start_mysql(config)
-print(f"Container ID: {container_id}")
+# config = {
+#     "container_name": "mysql",
+#     "port": 3307,
+#     "root_password": "securepass123"
+# }
+# container_id = start_mysql(config)
+# print(f"Container ID: {container_id}")

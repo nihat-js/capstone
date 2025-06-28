@@ -2,7 +2,7 @@ import subprocess
 import uuid
 import os
 
-def start_postgres(config):
+def start(config):
     port,name = config.get("port"), config.get("name")
     postgres_password = config.get("password", "postgres")
     name += f"_{port}_{str(uuid.uuid4())[:8]}"
