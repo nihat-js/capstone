@@ -9,6 +9,7 @@ app = Flask(__name__)
 
 services = []
 
+
 def with_json(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -18,6 +19,7 @@ def with_json(f):
             return jsonify({"error": "Invalid or missing JSON"}), 400
         return f(data, *args, **kwargs)
     return decorated_function
+
 
 DOCKER_SERVICES = {
     "postgres": postgres.start,
@@ -39,25 +41,19 @@ def start_service():
     if name is None or port is None:
         return jsonify({"error": "Name and port is required"}), 400
 
-    container_id = None
-
     if name.lower() in DOCKER_SERVICES:
-        try:
-            container_id = DOCKER_SERVICES[name.lower()](config)
+        container_id, error_message = DOCKER_SERVICES[name.lower()](config)
+        if error_message:
+            return jsonify({"error": error_message}), 500
+        else:
             services.append({
                 "type": "docker",
                 "container_id": container_id,
                 "name": name,
                 "config": config})
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
+            return jsonify({"error": False, "container_id": container_id}), 200
     else:
         return jsonify({"error": "Service not recognized"}), 400
-
-    return jsonify({
-        "message": f"{name} service started successfully",
-        "container_id": container_id
-    }), 200
 
 
 @app.route('/services/stop', methods=['POST'])
@@ -73,8 +69,5 @@ def stop_service(data):
         services[:] = [s for s in services if s["name"] != data["name"]]
         return jsonify({"message": "Service stopped successfully"}), 200
 
+
 app.run(host="localhost", port=5000, debug=True)
-
-
-
-
