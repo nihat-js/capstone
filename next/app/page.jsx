@@ -7,35 +7,19 @@ import {
   Plus, 
   Server, 
   Play, 
-  Square, 
-  Trash2, 
-  Eye, 
-  Download, 
-  TrendingUp, 
   Activity, 
-  MapPin, 
-  Clock, 
-  Users, 
   Target, 
   ChevronDown, 
-  ChevronUp, 
-  Settings, 
-  Terminal, 
-  Globe, 
-  Database, 
-  Wifi, 
-  Monitor, 
-  Lock, 
-  Search 
+  ChevronUp,
+  Search
 } from 'lucide-react'
-import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 import { HoneypotCard } from "./components/HoneypotCard"
 import { StatsCard } from './components/StatsCard'
 import { LogsModal } from './components/LogsModal'
 import { ConfigurationModal } from './components/ConfigurationModal'
 import { generateFakeHoneypots, generateFakeStats, generateFakeHoneypotTypes } from './utils/fakeData'
-
+import { availableServices } from './config/availableServices'
 export default function Dashboard() {
   const router = useRouter()
   const [honeypots, setHoneypots] = useState([])
@@ -58,68 +42,7 @@ export default function Dashboard() {
   const fakeTypes = generateFakeHoneypotTypes()
 
   // Available honeypot services - prioritize ssh, http, ftp
-  const availableServices = [
-    {
-      id: 'ssh',
-      name: 'SSH Server',
-      type: 'ssh',
-      description: 'Secure Shell honeypot for capturing login attempts and commands',
-      icon: Terminal,
-      security: 'Password & Key Auth',
-      monitoring: 'Command Logging',
-      attackTypes: 'Brute Force, Credential Harvesting'
-    },
-    {
-      id: 'http',
-      name: 'HTTP Server',
-      type: 'http',
-      description: 'Web server honeypot for detecting web-based attacks',
-      icon: Globe,
-      security: 'Form Authentication',
-      monitoring: 'Request Logging',
-      attackTypes: 'SQL Injection, XSS, Directory Traversal'
-    },
-    {
-      id: 'ftp',
-      name: 'FTP Server',
-      type: 'ftp',
-      description: 'File Transfer Protocol honeypot for file access monitoring',
-      icon: Database,
-      security: 'Anonymous & Auth',
-      monitoring: 'File Operations',
-      attackTypes: 'File Upload, Directory Listing'
-    },
-    {
-      id: 'telnet',
-      name: 'Telnet Server',
-      type: 'telnet',
-      description: 'Legacy terminal access honeypot',
-      icon: Monitor,
-      security: 'Basic Authentication',
-      monitoring: 'Session Recording',
-      attackTypes: 'Legacy System Exploitation'
-    },
-    {
-      id: 'rdp',
-      name: 'RDP Server',
-      type: 'rdp',
-      description: 'Remote Desktop Protocol honeypot for Windows attacks',
-      icon: Wifi,
-      security: 'Windows Auth',
-      monitoring: 'Desktop Sessions',
-      attackTypes: 'Remote Access, Credential Theft'
-    },
-    {
-      id: 'mysql',
-      name: 'MySQL Database',
-      type: 'mysql',
-      description: 'Database honeypot for SQL injection and data theft detection',
-      icon: Lock,
-      security: 'Database Auth',
-      monitoring: 'Query Logging',
-      attackTypes: 'SQL Injection, Data Exfiltration'
-    }
-  ]
+
 
   useEffect(() => {
     // Use fake data for demo
@@ -128,116 +51,116 @@ export default function Dashboard() {
     setHoneypotTypes(fakeTypes)
     setLoading(false)
   }, [])
+  const API = 'http://localhost:5000/api/'
+  // const loadData = async () => {
+  //   try {
+  //     const response = await fetch(API + "honeypots")
+  //     const data = await response.json()
 
-  const loadData = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/honeypots')
-      const data = await response.json()
+  //     if (data.success) {
+  //       setHoneypots(Object.values(data.data.configs))
+  //       setRunningHoneypots(data.data.running)
+  //       setStats(data.data.statistics)
+  //     }
+  //   } catch (error) {
+  //     toast.error('Failed to load honeypots. Make sure the Flask API is running.')
+  //     console.error('Error loading honeypots:', error)
+  //   } finally {
+  //     setLoading(false)
+  //   }
+  // }
 
-      if (data.success) {
-        setHoneypots(Object.values(data.data.configs))
-        setRunningHoneypots(data.data.running)
-        setStats(data.data.statistics)
-      }
-    } catch (error) {
-      toast.error('Failed to load honeypots. Make sure the Flask API is running.')
-      console.error('Error loading honeypots:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // const loadHoneypotTypes = async () => {
+  //   try {
+  //     const response = await fetch('/api/honeypot-types')
+  //     const data = await response.json()
 
-  const loadHoneypotTypes = async () => {
-    try {
-      const response = await fetch('/api/honeypot-types')
-      const data = await response.json()
+  //     if (data.success) {
+  //       setHoneypotTypes(data.data)
+  //     }
+  //   } catch (error) {
+  //     console.error('Error loading honeypot types:', error)
+  //   }
+  // }
 
-      if (data.success) {
-        setHoneypotTypes(data.data)
-      }
-    } catch (error) {
-      console.error('Error loading honeypot types:', error)
-    }
-  }
+  // const handleStartHoneypot = async (id) => {
+  //   try {
+  //     const response = await fetch('http://localhost:5000/api/ssh/start', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({ config_id: id })
+  //     })
+  //     const data = await response.json()
 
-  const handleStartHoneypot = async (id) => {
-    try {
-      const response = await fetch('http://localhost:5000/api/ssh/start', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ config_id: id })
-      })
-      const data = await response.json()
+  //     if (data.success) {
+  //       toast.success('Honeypot started successfully!')
+  //       loadData()
+  //     } else {
+  //       toast.error(data.error || 'Failed to start honeypot')
+  //     }
+  //   } catch (error) {
+  //     toast.error('Failed to start honeypot. Make sure the Flask API is running.')
+  //     console.error('Error starting honeypot:', error)
+  //   }
+  // }
 
-      if (data.success) {
-        toast.success('Honeypot started successfully!')
-        loadData()
-      } else {
-        toast.error(data.error || 'Failed to start honeypot')
-      }
-    } catch (error) {
-      toast.error('Failed to start honeypot. Make sure the Flask API is running.')
-      console.error('Error starting honeypot:', error)
-    }
-  }
+  // const handleStopHoneypot = async (id) => {
+  //   try {
+  //     const response = await fetch('http://localhost:5000/api/ssh/stop', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({ config_id: id })
+  //     })
+  //     const data = await response.json()
 
-  const handleStopHoneypot = async (id) => {
-    try {
-      const response = await fetch('http://localhost:5000/api/ssh/stop', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ config_id: id })
-      })
-      const data = await response.json()
+  //     if (data.success) {
+  //       toast.success('Honeypot stopped successfully!')
+  //       loadData()
+  //     } else {
+  //       toast.error(data.error || 'Failed to stop honeypot')
+  //     }
+  //   } catch (error) {
+  //     toast.error('Failed to stop honeypot. Make sure the Flask API is running.')
+  //     console.error('Error stopping honeypot:', error)
+  //   }
+  // }
 
-      if (data.success) {
-        toast.success('Honeypot stopped successfully!')
-        loadData()
-      } else {
-        toast.error(data.error || 'Failed to stop honeypot')
-      }
-    } catch (error) {
-      toast.error('Failed to stop honeypot. Make sure the Flask API is running.')
-      console.error('Error stopping honeypot:', error)
-    }
-  }
+  // const handleDeleteHoneypot = async (id) => {
+  //   if (!confirm('Are you sure you want to delete this honeypot? This action cannot be undone.')) {
+  //     return
+  //   }
 
-  const handleDeleteHoneypot = async (id) => {
-    if (!confirm('Are you sure you want to delete this honeypot? This action cannot be undone.')) {
-      return
-    }
+  //   try {
+  //     const response = await fetch(`/api/honeypots/${id}`, {
+  //       method: 'DELETE'
+  //     })
+  //     const data = await response.json()
 
-    try {
-      const response = await fetch(`/api/honeypots/${id}`, {
-        method: 'DELETE'
-      })
-      const data = await response.json()
+  //     if (data.success) {
+  //       toast.success('Honeypot deleted successfully!')
+  //       loadData()
+  //     } else {
+  //       toast.error(data.error || 'Failed to delete honeypot')
+  //     }
+  //   } catch (error) {
+  //     toast.error('Failed to delete honeypot')
+  //     console.error('Error deleting honeypot:', error)
+  //   }
+  // }
 
-      if (data.success) {
-        toast.success('Honeypot deleted successfully!')
-        loadData()
-      } else {
-        toast.error(data.error || 'Failed to delete honeypot')
-      }
-    } catch (error) {
-      toast.error('Failed to delete honeypot')
-      console.error('Error deleting honeypot:', error)
-    }
-  }
+  // const handleViewLogs = (id) => {
+  //   setSelectedHoneypot(id)
+  //   setShowLogsModal(true)
+  // }
 
-  const handleViewLogs = (id) => {
-    setSelectedHoneypot(id)
-    setShowLogsModal(true)
-  }
-
-  const handleCreateHoneypot = () => {
-    setShowCreateModal(false)
-    loadData()
-  }
+  // const handleCreateHoneypot = () => {
+  //   setShowCreateModal(false)
+  //   loadData()
+  // }
 
   const handleServiceClick = (service) => {
     setSelectedService(service)
