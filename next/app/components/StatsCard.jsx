@@ -31,7 +31,7 @@ const StatsCardContainer = styled.div`
 `;
 
 const StatsCardContent = styled.div`
-  padding: 1.5rem;
+  padding: .5rem 1rem;
   display: flex;
   align-items: center;
   gap: 1rem;

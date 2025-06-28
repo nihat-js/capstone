@@ -2,15 +2,38 @@
 
 import { useState, useEffect } from 'react'
 import styled from 'styled-components'
-import { Shield, Plus, Server, Play, Square, Trash2, Eye, Download, TrendingUp, Activity, MapPin, Clock, Users, Target, ChevronDown, ChevronUp } from 'lucide-react'
+import { 
+  Shield, 
+  Plus, 
+  Server, 
+  Play, 
+  Square, 
+  Trash2, 
+  Eye, 
+  Download, 
+  TrendingUp, 
+  Activity, 
+  MapPin, 
+  Clock, 
+  Users, 
+  Target, 
+  ChevronDown, 
+  ChevronUp, 
+  Settings, 
+  Terminal, 
+  Globe, 
+  Database, 
+  Wifi, 
+  Monitor, 
+  Lock, 
+  Search 
+} from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
-import { DashboardLayout } from './components/DashboardLayout'
 import { HoneypotCard } from "./components/HoneypotCard"
 import { StatsCard } from './components/StatsCard'
-import { CreateHoneypotModal } from './components/CreateHoneypotModal'
 import { LogsModal } from './components/LogsModal'
-import { HoneypotServicesModal } from './components/HoneypotServicesModal'
+import { ConfigurationModal } from './components/ConfigurationModal'
 import { generateFakeHoneypots, generateFakeStats, generateFakeHoneypotTypes } from './utils/fakeData'
 
 export default function Dashboard() {
@@ -22,45 +45,102 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showLogsModal, setShowLogsModal] = useState(false)
-  const [showServicesModal, setShowServicesModal] = useState(false)
+  const [showConfigModal, setShowConfigModal] = useState(false)
   const [selectedHoneypot, setSelectedHoneypot] = useState(null)
+  const [selectedService, setSelectedService] = useState(null)
+  const [showAllServices, setShowAllServices] = useState(false)
   const [showAllHoneypots, setShowAllHoneypots] = useState(false)
-  const [useFakeData, setUseFakeData] = useState(true) // For demo purposes
+  const [searchTerm, setSearchTerm] = useState('')
 
   // Fake data for demo
   const fakeHoneypots = generateFakeHoneypots()
   const fakeStats = generateFakeStats(fakeHoneypots)
   const fakeTypes = generateFakeHoneypotTypes()
 
-  useEffect(() => {
-    if (useFakeData) {
-      // Use fake data for demo
-      setHoneypots(fakeHoneypots)
-      setStats(fakeStats)
-      setHoneypotTypes(fakeTypes)
-      setLoading(false)
-    } else {
-      loadData()
-      loadHoneypotTypes()
-      
-      // Auto-refresh every 30 seconds
-      const interval = setInterval(loadData, 30000)
-      return () => clearInterval(interval)
+  // Available honeypot services - prioritize ssh, http, ftp
+  const availableServices = [
+    {
+      id: 'ssh',
+      name: 'SSH Server',
+      type: 'ssh',
+      description: 'Secure Shell honeypot for capturing login attempts and commands',
+      icon: Terminal,
+      security: 'Password & Key Auth',
+      monitoring: 'Command Logging',
+      attackTypes: 'Brute Force, Credential Harvesting'
+    },
+    {
+      id: 'http',
+      name: 'HTTP Server',
+      type: 'http',
+      description: 'Web server honeypot for detecting web-based attacks',
+      icon: Globe,
+      security: 'Form Authentication',
+      monitoring: 'Request Logging',
+      attackTypes: 'SQL Injection, XSS, Directory Traversal'
+    },
+    {
+      id: 'ftp',
+      name: 'FTP Server',
+      type: 'ftp',
+      description: 'File Transfer Protocol honeypot for file access monitoring',
+      icon: Database,
+      security: 'Anonymous & Auth',
+      monitoring: 'File Operations',
+      attackTypes: 'File Upload, Directory Listing'
+    },
+    {
+      id: 'telnet',
+      name: 'Telnet Server',
+      type: 'telnet',
+      description: 'Legacy terminal access honeypot',
+      icon: Monitor,
+      security: 'Basic Authentication',
+      monitoring: 'Session Recording',
+      attackTypes: 'Legacy System Exploitation'
+    },
+    {
+      id: 'rdp',
+      name: 'RDP Server',
+      type: 'rdp',
+      description: 'Remote Desktop Protocol honeypot for Windows attacks',
+      icon: Wifi,
+      security: 'Windows Auth',
+      monitoring: 'Desktop Sessions',
+      attackTypes: 'Remote Access, Credential Theft'
+    },
+    {
+      id: 'mysql',
+      name: 'MySQL Database',
+      type: 'mysql',
+      description: 'Database honeypot for SQL injection and data theft detection',
+      icon: Lock,
+      security: 'Database Auth',
+      monitoring: 'Query Logging',
+      attackTypes: 'SQL Injection, Data Exfiltration'
     }
-  }, [useFakeData])
+  ]
+
+  useEffect(() => {
+    // Use fake data for demo
+    setHoneypots(fakeHoneypots)
+    setStats(fakeStats)
+    setHoneypotTypes(fakeTypes)
+    setLoading(false)
+  }, [])
 
   const loadData = async () => {
     try {
-      const response = await fetch('/api/honeypots')
+      const response = await fetch('http://localhost:5000/api/honeypots')
       const data = await response.json()
-      
+
       if (data.success) {
         setHoneypots(Object.values(data.data.configs))
         setRunningHoneypots(data.data.running)
         setStats(data.data.statistics)
       }
     } catch (error) {
-      toast.error('Failed to load honeypots')
+      toast.error('Failed to load honeypots. Make sure the Flask API is running.')
       console.error('Error loading honeypots:', error)
     } finally {
       setLoading(false)
@@ -71,7 +151,7 @@ export default function Dashboard() {
     try {
       const response = await fetch('/api/honeypot-types')
       const data = await response.json()
-      
+
       if (data.success) {
         setHoneypotTypes(data.data)
       }
@@ -82,11 +162,15 @@ export default function Dashboard() {
 
   const handleStartHoneypot = async (id) => {
     try {
-      const response = await fetch(`/api/honeypots/${id}/start`, {
-        method: 'POST'
+      const response = await fetch('http://localhost:5000/api/ssh/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ config_id: id })
       })
       const data = await response.json()
-      
+
       if (data.success) {
         toast.success('Honeypot started successfully!')
         loadData()
@@ -94,18 +178,22 @@ export default function Dashboard() {
         toast.error(data.error || 'Failed to start honeypot')
       }
     } catch (error) {
-      toast.error('Failed to start honeypot')
+      toast.error('Failed to start honeypot. Make sure the Flask API is running.')
       console.error('Error starting honeypot:', error)
     }
   }
 
   const handleStopHoneypot = async (id) => {
     try {
-      const response = await fetch(`/api/honeypots/${id}/stop`, {
-        method: 'POST'
+      const response = await fetch('http://localhost:5000/api/ssh/stop', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ config_id: id })
       })
       const data = await response.json()
-      
+
       if (data.success) {
         toast.success('Honeypot stopped successfully!')
         loadData()
@@ -113,7 +201,7 @@ export default function Dashboard() {
         toast.error(data.error || 'Failed to stop honeypot')
       }
     } catch (error) {
-      toast.error('Failed to stop honeypot')
+      toast.error('Failed to stop honeypot. Make sure the Flask API is running.')
       console.error('Error stopping honeypot:', error)
     }
   }
@@ -128,7 +216,7 @@ export default function Dashboard() {
         method: 'DELETE'
       })
       const data = await response.json()
-      
+
       if (data.success) {
         toast.success('Honeypot deleted successfully!')
         loadData()
@@ -151,10 +239,27 @@ export default function Dashboard() {
     loadData()
   }
 
-  const handleServiceSelect = (serviceType) => {
-    setShowServicesModal(false)
-    router.push(`/config/${serviceType}`)
+  const handleServiceClick = (service) => {
+    setSelectedService(service)
+    setShowConfigModal(true)
   }
+
+  const handleHoneypotCreated = () => {
+    setShowCreateModal(false)
+    // Refresh data in real implementation
+  }
+
+  // Filter services based on search term
+  const filteredServices = availableServices.filter(service =>
+    service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    service.description.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  // Filter honeypots based on search term
+  const filteredHoneypots = honeypots.filter(honeypot =>
+    honeypot.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    honeypot.type?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   const renderDashboard = () => {
     if (loading) {
@@ -165,7 +270,8 @@ export default function Dashboard() {
       )
     }
 
-    const displayedHoneypots = showAllHoneypots ? honeypots : honeypots.slice(0, 6)
+    const displayedServices = showAllServices ? filteredServices : filteredServices.slice(0, 3)
+    const displayedHoneypots = showAllHoneypots ? filteredHoneypots : filteredHoneypots.slice(0, 6)
 
     return (
       <>
@@ -175,16 +281,26 @@ export default function Dashboard() {
             <HeaderTitle>Dashboard</HeaderTitle>
             <HeaderSubtitle>Monitor and manage your honeypot infrastructure</HeaderSubtitle>
           </HeaderLeft>
-          <HeaderActions>
-            <DemoToggle onClick={() => setUseFakeData(!useFakeData)} $active={useFakeData}>
-              Demo Mode
-            </DemoToggle>
+          {/* <HeaderActions>
             <CreateButton onClick={() => setShowCreateModal(true)}>
               <Plus size={16} />
               <span>Create Honeypot</span>
             </CreateButton>
-          </HeaderActions>
+          </HeaderActions> */}
         </DashboardHeader>
+
+        {/* Search Bar */}
+        <SearchContainer>
+          <SearchWrapper>
+            <Search size={20} />
+            <SearchInput
+              type="text"
+              placeholder="Search services and honeypots..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </SearchWrapper>
+        </SearchContainer>
 
         {/* Statistics Overview */}
         <StatsGrid>
@@ -202,124 +318,64 @@ export default function Dashboard() {
           />
           <StatsCard
             title="Connections Today"
-            value={useFakeData ? stats.connectionsToday : stats.stopped}
+            value={stats.connectionsToday}
             icon={Activity}
             color="orange"
           />
           <StatsCard
             title="Attacks Blocked"
-            value={useFakeData ? stats.attacksBlocked : Object.keys(honeypotTypes).length}
+            value={stats.attacksBlocked}
             icon={Shield}
             color="red"
           />
         </StatsGrid>
 
-        {/* Threat Intelligence Overview */}
-        {useFakeData && (
-          <ThreatOverview>
-            <OverviewSection>
-              <SectionHeader>
-                <SectionTitle>
-                  <Target size={20} />
-                  Recent Attack Activity
-                </SectionTitle>
-                <SectionSubtitle>Live threat detection feed</SectionSubtitle>
-              </SectionHeader>
-              <RecentAttacks>
-                {stats.recentAttacks?.map((attack, index) => (
-                  <AttackItem key={index}>
-                    <AttackTime>{attack.time}</AttackTime>
-                    <AttackType>{attack.type}</AttackType>
-                    <AttackSource>from {attack.source}</AttackSource>
-                    <AttackTarget>→ {attack.target}</AttackTarget>
-                  </AttackItem>
-                ))}
-              </RecentAttacks>
-            </OverviewSection>
-
-            <OverviewSection>
-              <SectionHeader>
-                <SectionTitle>
-                  <TrendingUp size={20} />
-                  Top Attack Types
-                </SectionTitle>
-                <SectionSubtitle>Last 24 hours</SectionSubtitle>
-              </SectionHeader>
-              <AttackTypesList>
-                {stats.topAttackTypes?.map((attackType, index) => (
-                  <AttackTypeItem key={index}>
-                    <AttackTypeName>{attackType.type}</AttackTypeName>
-                    <AttackTypeStats>
-                      <AttackTypeCount>{attackType.count}</AttackTypeCount>
-                      <AttackTypeBar>
-                        <AttackTypeFill $width={attackType.percentage} />
-                      </AttackTypeBar>
-                      <AttackTypePercent>{attackType.percentage}%</AttackTypePercent>
-                    </AttackTypeStats>
-                  </AttackTypeItem>
-                ))}
-              </AttackTypesList>
-            </OverviewSection>
-
-            <OverviewSection>
-              <SectionHeader>
-                <SectionTitle>
-                  <MapPin size={20} />
-                  Geographic Threats
-                </SectionTitle>
-                <SectionSubtitle>Attack origins</SectionSubtitle>
-              </SectionHeader>
-              <GeographicList>
-                {stats.geographicData?.map((geo, index) => (
-                  <GeoItem key={index}>
-                    <GeoCountry>{geo.country}</GeoCountry>
-                    <GeoStats>
-                      <GeoCount>{geo.attacks} attacks</GeoCount>
-                      <GeoBar>
-                        <GeoFill $width={geo.percentage} />
-                      </GeoBar>
-                    </GeoStats>
-                  </GeoItem>
-                ))}
-              </GeographicList>
-            </OverviewSection>
-          </ThreatOverview>
-        )}
-
-        {/* Honeypots Section */}
-        <HoneypotsSection>
+        {/* Available Services Section */}
+        <ServicesSection>
           <SectionHeader>
             <SectionTitle>
-              <Shield size={20} />
-              Active Honeypots
+              <Server size={20} />
+              Create Honeypot
             </SectionTitle>
             <SectionSubtitle>
-              {showAllHoneypots ? `Showing all ${honeypots.length}` : `Showing ${Math.min(6, honeypots.length)} of ${honeypots.length}`} honeypots
+              Choose a service to configure and deploy your honeypot
             </SectionSubtitle>
           </SectionHeader>
 
-          <HoneypotsGrid>
-            {displayedHoneypots.map((honeypot) => (
-              <HoneypotCard
-                key={honeypot.id}
-                honeypot={{
-                  ...honeypot,
-                  status: useFakeData ? honeypot.status : (honeypot.id in runningHoneypots ? 'running' : 'stopped'),
-                  created_at: honeypot.created_at || honeypot.created
-                }}
-                honeypotType={honeypotTypes[honeypot.type]}
-                onStart={() => handleStartHoneypot(honeypot.id)}
-                onStop={() => handleStopHoneypot(honeypot.id)}
-                onDelete={() => handleDeleteHoneypot(honeypot.id)}
-                onViewLogs={() => handleViewLogs(honeypot.id)}
-                onConfigure={() => {}} // TODO: Add configure functionality
-              />
-            ))}
-          </HoneypotsGrid>
+          <ServicesGrid>
+            {displayedServices.map((service) => (
+              <ServiceCard key={service.id} onClick={() => handleServiceClick(service)}>
+                <ServiceHeader>
+                  <ServiceIcon>
+                    <service.icon size={24} />
+                  </ServiceIcon>
+                  <ServiceInfo>
+                    <ServiceName>{service.name}</ServiceName>
+                    <ServiceDescription>{service.description}</ServiceDescription>
+                  </ServiceInfo>
+                </ServiceHeader>
 
-          {honeypots.length > 6 && (
-            <ShowMoreButton onClick={() => setShowAllHoneypots(!showAllHoneypots)}>
-              {showAllHoneypots ? (
+                <ServiceDetails>
+                  <ServiceFeature>
+                    <Shield size={16} />
+                    {service.security}
+                  </ServiceFeature>
+                  <ServiceFeature>
+                    <Activity size={16} />
+                    {service.monitoring}
+                  </ServiceFeature>
+                  <ServiceFeature>
+                    <Target size={16} />
+                    {service.attackTypes}
+                  </ServiceFeature>
+                </ServiceDetails>
+              </ServiceCard>
+            ))}
+          </ServicesGrid>
+
+          {filteredServices.length > 3 && (
+            <ShowMoreButton onClick={() => setShowAllServices(!showAllServices)}>
+              {showAllServices ? (
                 <>
                   <ChevronUp size={16} />
                   Show Less
@@ -327,12 +383,70 @@ export default function Dashboard() {
               ) : (
                 <>
                   <ChevronDown size={16} />
-                  Show More ({honeypots.length - 6} more)
+                  Show All ({filteredServices.length - 3} more)
                 </>
               )}
             </ShowMoreButton>
           )}
-        </HoneypotsSection>
+        </ServicesSection>
+
+        {/* Active Honeypots Section - Only show if there are honeypots */}
+        {filteredHoneypots.length > 0 && (
+          <HoneypotsSection>
+            <SectionHeader>
+              <SectionTitle>
+                <Shield size={20} />
+                Active Honeypots
+              </SectionTitle>
+              <SectionSubtitle>
+                {showAllHoneypots ? `Showing all ${filteredHoneypots.length}` : `Showing ${Math.min(6, filteredHoneypots.length)} of ${filteredHoneypots.length}`} honeypots
+              </SectionSubtitle>
+            </SectionHeader>
+
+            <HoneypotsGrid>
+              {displayedHoneypots.map((honeypot) => (
+                <HoneypotCard
+                  key={honeypot.id}
+                  honeypot={{
+                    ...honeypot,
+                    status: honeypot.status,
+                    created_at: honeypot.created_at || honeypot.created
+                  }}
+                  honeypotType={honeypotTypes[honeypot.type]}
+                  onStart={() => handleStartHoneypot(honeypot.id)}
+                  onStop={() => handleStopHoneypot(honeypot.id)}
+                  onDelete={() => handleDeleteHoneypot(honeypot.id)}
+                  onViewLogs={() => handleViewLogs(honeypot.id)}
+                  onConfigure={() => handleServiceClick(availableServices.find(s => s.type === honeypot.type))}
+                />
+              ))}
+            </HoneypotsGrid>
+
+            {filteredHoneypots.length > 6 && (
+              <ShowMoreButton onClick={() => setShowAllHoneypots(!showAllHoneypots)}>
+                {showAllHoneypots ? (
+                  <>
+                    <ChevronUp size={16} />
+                    Show Less
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown size={16} />
+                    Show More ({filteredHoneypots.length - 6} more)
+                  </>
+                )}
+              </ShowMoreButton>
+            )}
+          </HoneypotsSection>
+        )}
+
+        {filteredHoneypots.length === 0 && honeypots.length > 0 && (
+          <EmptyState>
+            <Search size={48} />
+            <EmptyTitle>No honeypots found</EmptyTitle>
+            <EmptyDescription>Try adjusting your search terms.</EmptyDescription>
+          </EmptyState>
+        )}
 
         {honeypots.length === 0 && (
           <EmptyState>
@@ -351,16 +465,16 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      <PageContent>
         <LoadingContainer>
           <LoadingSpinner />
         </LoadingContainer>
-      </DashboardLayout>
+      </PageContent>
     )
   }
 
   return (
-    <DashboardLayout>
+    <>
       {/* Page Content */}
       <PageContent>
         {renderDashboard()}
@@ -371,14 +485,15 @@ export default function Dashboard() {
         <CreateHoneypotModal
           honeypotTypes={honeypotTypes}
           onClose={() => setShowCreateModal(false)}
-          onSuccess={handleCreateHoneypot}
+          onSuccess={handleHoneypotCreated}
         />
       )}
 
-      {showServicesModal && (
-        <HoneypotServicesModal
-          onClose={() => setShowServicesModal(false)}
-          onServiceSelect={handleServiceSelect}
+      {showConfigModal && selectedService && (
+        <ConfigurationModal
+          service={selectedService}
+          onClose={() => setShowConfigModal(false)}
+          onSave={() => setShowConfigModal(false)}
         />
       )}
 
@@ -389,13 +504,13 @@ export default function Dashboard() {
           onClose={() => setShowLogsModal(false)}
         />
       )}
-    </DashboardLayout>
+    </>
   )
 }
 
 // Styled Components for Dashboard
 const PageContent = styled.div`
-  padding: 1.5rem;
+  padding: 1rem;
   min-height: calc(100vh - 4rem);
 `;
 
@@ -403,14 +518,14 @@ const LoadingContainer = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 50vh;
+  min-height: 30vh;
 `;
 
 const LoadingSpinner = styled.div`
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f4f6;
-  border-top: 4px solid #2563eb;
+  width: 32px;
+  height: 32px;
+  border: 3px solid #f3f4f6;
+  border-top: 3px solid #2563eb;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -424,8 +539,8 @@ const DashboardHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
   border-bottom: 1px solid #e5e7eb;
 
   @media (max-width: 768px) {
@@ -438,11 +553,11 @@ const DashboardHeader = styled.div`
 const HeaderLeft = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.25rem;
 `;
 
 const HeaderTitle = styled.h1`
-  font-size: 2rem;
+  font-size: 1.75rem;
   font-weight: 700;
   color: #111827;
   margin: 0;
@@ -451,7 +566,7 @@ const HeaderTitle = styled.h1`
 const HeaderSubtitle = styled.p`
   color: #6b7280;
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.875rem;
 `;
 
 const HeaderActions = styled.div`
@@ -465,32 +580,17 @@ const HeaderActions = styled.div`
   }
 `;
 
-const DemoToggle = styled.button`
-  padding: 0.5rem 1rem;
-  border: 1px solid ${props => props.$active ? '#2563eb' : '#d1d5db'};
-  background: ${props => props.$active ? '#2563eb' : 'white'};
-  color: ${props => props.$active ? 'white' : '#374151'};
-  border-radius: 6px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-
-  &:hover {
-    border-color: #2563eb;
-    background: ${props => props.$active ? '#1d4ed8' : '#f9fafb'};
-  }
-`;
-
 const CreateButton = styled.button`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
+  padding: 0.625rem 1.25rem;
   background: #2563eb;
   color: white;
   border: none;
   border-radius: 8px;
   font-weight: 600;
+  font-size: 0.875rem;
   transition: all 0.2s ease;
 
   &:hover {
@@ -503,11 +603,49 @@ const CreateButton = styled.button`
   }
 `;
 
+const SearchContainer = styled.div`
+  margin-bottom: 1.25rem;
+`;
+
+const SearchWrapper = styled.div`
+  position: relative;
+  max-width: 350px;
+  
+  svg {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6b7280;
+    pointer-events: none;
+  }
+`;
+
+const SearchInput = styled.input`
+  width: 100%;
+  padding: 0.625rem 0.625rem 0.625rem 2.25rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: white;
+  color: #111827;
+  
+  &:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+  
+  &::placeholder {
+    color: #9ca3af;
+  }
+`;
+
 const StatsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
 `;
 
 const ThreatOverview = styled.div`
@@ -517,23 +655,15 @@ const ThreatOverview = styled.div`
   margin-bottom: 2rem;
 `;
 
-const OverviewSection = styled.div`
-  background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e5e7eb;
-`;
-
 const SectionHeader = styled.div`
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 `;
 
 const SectionTitle = styled.h3`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 600;
   color: #111827;
   margin: 0 0 0.25rem 0;
@@ -545,160 +675,19 @@ const SectionTitle = styled.h3`
 
 const SectionSubtitle = styled.p`
   color: #6b7280;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   margin: 0;
 `;
 
-const RecentAttacks = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-`;
-
-const AttackItem = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  padding: 0.75rem;
-  background: #f9fafb;
-  border-radius: 6px;
-  border-left: 3px solid #ef4444;
-`;
-
-const AttackTime = styled.span`
-  font-size: 0.75rem;
-  color: #6b7280;
-  font-weight: 500;
-`;
-
-const AttackType = styled.span`
-  font-weight: 600;
-  color: #111827;
-  font-size: 0.875rem;
-`;
-
-const AttackSource = styled.span`
-  font-size: 0.75rem;
-  color: #374151;
-  font-family: monospace;
-`;
-
-const AttackTarget = styled.span`
-  font-size: 0.75rem;
-  color: #6b7280;
-`;
-
-const AttackTypesList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-`;
-
-const AttackTypeItem = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-`;
-
-const AttackTypeName = styled.span`
-  font-weight: 600;
-  color: #111827;
-  font-size: 0.875rem;
-`;
-
-const AttackTypeStats = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-`;
-
-const AttackTypeCount = styled.span`
-  font-size: 0.75rem;
-  color: #6b7280;
-  font-weight: 500;
-  min-width: 3rem;
-`;
-
-const AttackTypeBar = styled.div`
-  flex: 1;
-  height: 6px;
-  background: #f3f4f6;
-  border-radius: 3px;
-  overflow: hidden;
-`;
-
-const AttackTypeFill = styled.div`
-  height: 100%;
-  width: ${props => props.$width}%;
-  background: linear-gradient(90deg, #ef4444, #dc2626);
-  transition: width 0.5s ease;
-`;
-
-const AttackTypePercent = styled.span`
-  font-size: 0.75rem;
-  color: #374151;
-  font-weight: 600;
-  min-width: 2.5rem;
-  text-align: right;
-`;
-
-const GeographicList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-`;
-
-const GeoItem = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-`;
-
-const GeoCountry = styled.span`
-  font-weight: 600;
-  color: #111827;
-  font-size: 0.875rem;
-  min-width: 5rem;
-`;
-
-const GeoStats = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex: 1;
-`;
-
-const GeoCount = styled.span`
-  font-size: 0.75rem;
-  color: #6b7280;
-  min-width: 4rem;
-`;
-
-const GeoBar = styled.div`
-  flex: 1;
-  height: 4px;
-  background: #f3f4f6;
-  border-radius: 2px;
-  overflow: hidden;
-`;
-
-const GeoFill = styled.div`
-  height: 100%;
-  width: ${props => props.$width}%;
-  background: linear-gradient(90deg, #3b82f6, #2563eb);
-  transition: width 0.5s ease;
-`;
-
 const HoneypotsSection = styled.div`
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 `;
 
 const HoneypotsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
 `;
 
 const ShowMoreButton = styled.button`
@@ -707,12 +696,13 @@ const ShowMoreButton = styled.button`
   justify-content: center;
   gap: 0.5rem;
   width: 100%;
-  padding: 1rem;
+  padding: 0.75rem;
   background: white;
   border: 2px dashed #d1d5db;
-  border-radius: 12px;
+  border-radius: 8px;
   color: #374151;
   font-weight: 500;
+  font-size: 0.875rem;
   transition: all 0.2s ease;
 
   &:hover {
@@ -727,20 +717,20 @@ const EmptyState = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 3rem;
+  padding: 2rem;
   background: white;
-  border-radius: 12px;
+  border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 1px solid #e5e7eb;
 
   svg {
     color: #d1d5db;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
   }
 `;
 
 const EmptyTitle = styled.h3`
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: #111827;
   margin: 0 0 0.5rem 0;
@@ -749,22 +739,108 @@ const EmptyTitle = styled.h3`
 const EmptyDescription = styled.p`
   color: #6b7280;
   text-align: center;
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 1rem 0;
+  font-size: 0.875rem;
 `;
 
 const EmptyButton = styled.button`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
+  padding: 0.625rem 1.25rem;
   background: #2563eb;
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   font-weight: 600;
+  font-size: 0.875rem;
   transition: all 0.2s ease;
 
   &:hover {
     background: #1d4ed8;
+  }
+`;
+
+// Services Section Styles
+const ServicesSection = styled.div`
+  margin-bottom: 1.5rem;
+`;
+
+const ServicesGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+`;
+
+const ServiceCard = styled.div`
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+`;
+
+const ServiceHeader = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+`;
+
+const ServiceIcon = styled.div`
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+`;
+
+const ServiceInfo = styled.div`
+  flex: 1;
+`;
+
+const ServiceName = styled.h3`
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 0.25rem 0;
+`;
+
+const ServiceDescription = styled.p`
+  color: #6b7280;
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+`;
+
+const ServiceDetails = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 1rem;
+`;
+
+const ServiceFeature = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8rem;
+  color: #374151;
+
+  svg {
+    color: #6b7280;
+    flex-shrink: 0;
   }
 `;
