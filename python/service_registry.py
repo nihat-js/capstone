@@ -256,3 +256,7 @@ class ServiceRegistry:
 
 # Global registry instance
 registry = ServiceRegistry()
+
+
+
+def start_ftp_service()

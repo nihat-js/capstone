@@ -55,34 +55,19 @@ const SERVICE_TEMPLATES = {
 }
 
 export function ConfigurationModal({ service, onClose, onSave }) {
-  const [selectedTemplate, setSelectedTemplate] = useState(null)
-  const [showConfig, setShowConfig] = useState(false)
-
-  const templates = SERVICE_TEMPLATES[service.type] || []
-
-  const handleTemplateSelect = (template) => {
-    setSelectedTemplate(template)
-    setShowConfig(true)
-  }
+  const [selectedTemplate, setSelectedTemplate] = useState(SERVICE_TEMPLATES[service.type]?.[0] || { name: 'Basic SSH' })
 
   const handleConfigSave = (config) => {
     onSave({ ...config, template: selectedTemplate })
     onClose()
   }
 
-  const handleBack = () => {
-    setShowConfig(false)
-    setSelectedTemplate(null)
-  }
-
   const renderConfigComponent = () => {
-    if (!selectedTemplate) return null
-
     const configProps = {
       template: selectedTemplate,
       service,
       onSave: handleConfigSave,
-      onBack: handleBack
+      onBack: onClose
     }
 
     switch (service.type) {
@@ -96,58 +81,10 @@ export function ConfigurationModal({ service, onClose, onSave }) {
     }
   }
 
-  if (showConfig) {
-    return (
-      <ModalOverlay onClick={onClose}>
-        <ModalContainer onClick={(e) => e.stopPropagation()}>
-          {renderConfigComponent()}
-        </ModalContainer>
-      </ModalOverlay>
-    )
-  }
-
   return (
     <ModalOverlay onClick={onClose}>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
-        <ModalHeader>
-          <HeaderContent>
-            <ServiceIconWrapper>
-              {getServiceIcon(service.type)}
-            </ServiceIconWrapper>
-            <div>
-              <ModalTitle>{service.name} Honeypot</ModalTitle>
-              <ModalSubtitle>Choose a configuration template</ModalSubtitle>
-            </div>
-          </HeaderContent>
-          <CloseButton onClick={onClose}>
-            <X size={20} />
-          </CloseButton>
-        </ModalHeader>
-
-        <ModalContent>
-          <TemplatesGrid>
-            {templates.map((template, index) => (
-              <TemplateCard key={index} onClick={() => handleTemplateSelect(template)}>
-                <TemplateIcon>
-                  {getServiceIcon(service.type)}
-                </TemplateIcon>
-                <TemplateInfo>
-                  <TemplateName>{template.name}</TemplateName>
-                  <TemplateDescription>{template.description}</TemplateDescription>
-                </TemplateInfo>
-              </TemplateCard>
-            ))}
-            <CustomTemplateCard onClick={() => handleTemplateSelect({ name: 'Custom', description: 'Create custom configuration' })}>
-              <TemplateIcon>
-                <Plus size={20} />
-              </TemplateIcon>
-              <TemplateInfo>
-                <TemplateName>Custom Configuration</TemplateName>
-                <TemplateDescription>Create your own custom setup</TemplateDescription>
-              </TemplateInfo>
-            </CustomTemplateCard>
-          </TemplatesGrid>
-        </ModalContent>
+        {renderConfigComponent()}
       </ModalContainer>
     </ModalOverlay>
   )

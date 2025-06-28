@@ -1,0 +1,43 @@
+2025-06-28 21:23:34.248 GMT [48] LOG:  starting PostgreSQL 17.5 (Debian 17.5-1.pgdg120+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit
+2025-06-28 21:23:34.644 GMT [48] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+2025-06-28 21:23:35.240 GMT [52] LOG:  database system was shut down at 2025-06-28 21:23:21 GMT
+2025-06-28 21:23:35.532 GMT [48] LOG:  database system is ready to accept connections
+2025-06-28 21:23:37.377 GMT [58] LOG:  statement: SELECT 1 FROM pg_database WHERE datname = 'postgres' ;
+2025-06-28 21:23:37.382 GMT [48] LOG:  received fast shutdown request
+2025-06-28 21:23:37.678 GMT [48] LOG:  aborting any active transactions
+2025-06-28 21:23:37.684 GMT [48] LOG:  background worker "logical replication launcher" (PID 55) exited with exit code 1
+2025-06-28 21:23:37.684 GMT [50] LOG:  shutting down
+2025-06-28 21:23:37.794 GMT [50] LOG:  checkpoint starting: shutdown immediate
+2025-06-28 21:23:38.840 GMT [50] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.368 s, sync=0.133 s, total=1.156 s; sync files=2, longest=0.067 s, average=0.067 s; distance=0 kB, estimate=0 kB; lsn=0/14E4FA0, redo lsn=0/14E4FA0
+2025-06-28 21:23:38.852 GMT [48] LOG:  database system is shut down
+2025-06-28 21:23:39.243 GMT [1] LOG:  starting PostgreSQL 17.5 (Debian 17.5-1.pgdg120+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit
+2025-06-28 21:23:39.368 GMT [1] LOG:  listening on IPv6 address "::1", port 5432
+2025-06-28 21:23:39.369 GMT [1] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2025-06-28 21:23:39.569 GMT [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+2025-06-28 21:23:39.894 GMT [64] LOG:  database system was shut down at 2025-06-28 21:23:38 GMT
+2025-06-28 21:23:40.005 GMT [1] LOG:  database system is ready to accept connections
+2025-06-28 21:24:26.304 GMT [1] LOG:  received fast shutdown request
+2025-06-28 21:24:26.567 GMT [1] LOG:  aborting any active transactions
+2025-06-28 21:24:26.570 GMT [1] LOG:  background worker "logical replication launcher" (PID 67) exited with exit code 1
+2025-06-28 21:24:26.570 GMT [62] LOG:  shutting down
+2025-06-28 21:24:26.912 GMT [62] LOG:  checkpoint starting: shutdown immediate
+2025-06-28 21:24:28.726 GMT [62] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.467 s, sync=0.131 s, total=2.157 s; sync files=2, longest=0.071 s, average=0.066 s; distance=0 kB, estimate=0 kB; lsn=0/14E5050, redo lsn=0/14E5050
+2025-06-28 21:24:28.744 GMT [1] LOG:  database system is shut down
+2025-06-28 21:24:55.231 GMT [48] LOG:  starting PostgreSQL 17.5 (Debian 17.5-1.pgdg120+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit
+2025-06-28 21:24:55.494 GMT [48] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+2025-06-28 21:24:56.000 GMT [52] LOG:  database system was shut down at 2025-06-28 21:24:51 GMT
+2025-06-28 21:24:56.182 GMT [48] LOG:  database system is ready to accept connections
+2025-06-28 21:24:56.323 GMT [58] LOG:  statement: SELECT 1 FROM pg_database WHERE datname = 'postgres' ;
+2025-06-28 21:24:56.326 GMT [48] LOG:  received fast shutdown request
+2025-06-28 21:24:56.469 GMT [48] LOG:  aborting any active transactions
+2025-06-28 21:24:56.471 GMT [48] LOG:  background worker "logical replication launcher" (PID 55) exited with exit code 1
+2025-06-28 21:24:56.471 GMT [50] LOG:  shutting down
+2025-06-28 21:24:56.745 GMT [50] LOG:  checkpoint starting: shutdown immediate
+2025-06-28 21:24:57.672 GMT [50] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.268 s, sync=0.139 s, total=1.201 s; sync files=2, longest=0.073 s, average=0.070 s; distance=0 kB, estimate=0 kB; lsn=0/14E4FA0, redo lsn=0/14E4FA0
+2025-06-28 21:24:57.677 GMT [48] LOG:  database system is shut down
+2025-06-28 21:24:58.014 GMT [1] LOG:  starting PostgreSQL 17.5 (Debian 17.5-1.pgdg120+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit
+2025-06-28 21:24:58.014 GMT [1] LOG:  listening on IPv6 address "::1", port 5432
+2025-06-28 21:24:58.014 GMT [1] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2025-06-28 21:24:58.360 GMT [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+2025-06-28 21:24:58.716 GMT [64] LOG:  database system was shut down at 2025-06-28 21:24:57 GMT
+2025-06-28 21:24:58.864 GMT [1] LOG:  database system is ready to accept connections

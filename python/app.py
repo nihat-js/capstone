@@ -19,6 +19,9 @@ CORS(app)
 def health_check():
     return jsonify({'status': 'healthy', 'message': 'Flask API is running'})
 
+
+
+
 @app.route('/api/services', methods=['GET'])
 def get_available_services():
     """Get list of available services"""
@@ -101,6 +104,9 @@ def configure_service(service_name):
 @app.route('/api/<service_name>/start', methods=['POST'])
 def start_service(service_name):
     """Start any service"""
+
+  
+
     try:
         data = request.get_json()
         config = data.get('config')
