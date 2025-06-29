@@ -68,3 +68,7 @@ The SSH service requires user configuration:
 - Focus is on basic functionality that works with your current API
 - All fake data generators are commented out in favor of real data
 - Error handling included for when API is not available
+- Fixed subprocess issues in all service files (MySQL, PostgreSQL, Redis, phpMyAdmin, FTP)
+- Dashboard auto-refreshes every 4 seconds for real-time monitoring
+- Improved loading states with skeleton animations instead of full-screen loading
+- Enhanced error handling for port conflicts with user-friendly messages

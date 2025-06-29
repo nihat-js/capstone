@@ -41,13 +41,18 @@ def start(config):
     ]
 
     try:
-        result = subprocess.run(docker_cmd, check=True, capture_output=True, text=True, stdout=sys.stdout, stderr=sys.stderr)
+        result = subprocess.run(docker_cmd, check=True, capture_output=True, text=True)
         container_id = result.stdout.strip()
         print(f"✅ FTP Server running on port {port}")
         print(f"📦 Container name: {name}")
         print(f"🔑 Container ID: {container_id}")
         print(f"👤 User: {ftp_user}")
         print(f"🔐 Password: {ftp_pass}")
+        return container_id, None
+    except subprocess.CalledProcessError as e:
+        print("❌ Failed to start FTP")
+        print(f"🔧 Error Message: {e.stderr.strip()}")
+        return None, f"Failed to start FTP: {e.stderr.strip()}"
         print(f"📁 Data Dir: {ftp_data_dir}")
         print(f"📄 Logs: {ftp_log_dir}")
         return container_id

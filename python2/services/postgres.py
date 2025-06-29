@@ -37,12 +37,17 @@ def start(config):
         "-c", "config_file=/etc/postgresql/postgresql.conf"
     ]
     try:
-        result = subprocess.run(docker_cmd, check=True, capture_output=True, text=True,stdout=sys.stdout,stderr=sys.stderr, )
+        result = subprocess.run(docker_cmd, check=True, capture_output=True, text=True)
         id = result.stdout.strip()
         return id, None  # ✅ success
     except subprocess.CalledProcessError as e:
-        error_message = e.stderr.strip()
-        return None, error_message  # ❌ failure
+        error_message = e.stderr.strip() if e.stderr else str(e)
+        
+        # Check for port conflict and provide cleaner error message
+        if "port is already allocated" in error_message or "Bind for" in error_message:
+            return None, f"Port {port} is already in use. Please choose a different port."
+        
+        return None, f"Failed to start PostgreSQL: {error_message}"
 
 
 # Example usage:

@@ -47,7 +47,16 @@ export function CreateHoneypotModal({ availableServices, onClose, onSuccess, api
       await apiService.startService(config)
       onSuccess()
     } catch (error) {
-      alert('Failed to create honeypot: ' + error.message)
+      // Check for port conflict error
+      if (error.message && error.message.includes('port is already allocated')) {
+        alert(`Port ${port} is already in use. Please choose a different port.`)
+      } else if (error.message && error.message.includes('Bind for')) {
+        const portMatch = error.message.match(/Bind for .*:(\d+) failed/)
+        const conflictPort = portMatch ? portMatch[1] : port
+        alert(`Port ${conflictPort} is already allocated. Please choose a different port.`)
+      } else {
+        alert('Failed to create honeypot: ' + (error.message || 'Unknown error'))
+      }
     } finally {
       setIsCreating(false)
     }

@@ -38,11 +38,11 @@ export default function Dashboard() {
   const [showAllHoneypots, setShowAllHoneypots] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [apiError, setApiError] = useState(null)
+  const [lastRefresh, setLastRefresh] = useState(new Date())
 
   // Fetch real data from API
   const fetchServices = async () => {
     try {
-      setLoading(true)
       setApiError(null)
       
       const services = await apiService.getServices()
@@ -69,6 +69,7 @@ export default function Dashboard() {
         attacksBlocked: 0    // Will need additional API endpoint for this
       }
       setStats(realStats)
+      setLastRefresh(new Date())
       
     } catch (error) {
       console.error('Failed to fetch services:', error)
@@ -82,9 +83,11 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
+    // Initial load with loading state
+    setLoading(true)
     fetchServices()
-    // Refresh data every 30 seconds
-    const interval = setInterval(fetchServices, 30000)
+    // Refresh data every 4 seconds for auto-refresh (without loading state)
+    const interval = setInterval(() => fetchServices(), 4000)
     return () => clearInterval(interval)
   }, [])
 
@@ -150,6 +153,11 @@ export default function Dashboard() {
         <HeaderSubtitle>
           Monitor and manage your honeypot infrastructure
           {apiError && <ErrorMessage>⚠️ {apiError}</ErrorMessage>}
+          {!apiError && (
+            <RefreshIndicator>
+              🔄 Auto-refresh every 4s | Last: {lastRefresh.toLocaleTimeString()}
+            </RefreshIndicator>
+          )}
         </HeaderSubtitle>
       </HeaderLeft>
     </DashboardHeader>
@@ -171,10 +179,21 @@ export default function Dashboard() {
 
   const renderStatsGrid = () => (
     <StatsGrid>
-      <StatsCard title="Total Honeypots" value={stats.total} icon={Server} color="blue" />
-      <StatsCard title="Running" value={stats.running} icon={Play} color="green" />
-      <StatsCard title="Connections Today" value={stats.connectionsToday} icon={Activity} color="orange" />
-      <StatsCard title="Attacks Blocked" value={stats.attacksBlocked} icon={Shield} color="red" />
+      {loading ? (
+        <>
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </>
+      ) : (
+        <>
+          <StatsCard title="Total Honeypots" value={stats.total} icon={Server} color="blue" />
+          <StatsCard title="Running" value={stats.running} icon={Play} color="green" />
+          <StatsCard title="Connections Today" value={stats.connectionsToday} icon={Activity} color="orange" />
+          <StatsCard title="Attacks Blocked" value={stats.attacksBlocked} icon={Shield} color="red" />
+        </>
+      )}
     </StatsGrid>
   )
 
@@ -269,6 +288,25 @@ export default function Dashboard() {
   }
 
   const renderHoneypotsSection = () => {
+    if (loading) {
+      return (
+        <HoneypotsSection>
+          <SectionHeader>
+            <SectionTitle>
+              <Shield size={20} />
+              Active Honeypots
+            </SectionTitle>
+            <SectionSubtitle>Loading honeypots...</SectionSubtitle>
+          </SectionHeader>
+          <HoneypotsGrid>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </HoneypotsGrid>
+        </HoneypotsSection>
+      )
+    }
+
     if (filteredHoneypots.length === 0) return null
 
     const displayedHoneypots = showAllHoneypots ? filteredHoneypots : filteredHoneypots.slice(0, 6)
@@ -373,6 +411,17 @@ export default function Dashboard() {
               setShowConfigModal(false)
             } catch (error) {
               console.error('Failed to start service:', error)
+              
+              // Check for port conflict error
+              if (error.message && error.message.includes('port is already allocated')) {
+                alert(`Port ${config.port} is already in use. Please choose a different port.`)
+              } else if (error.message && error.message.includes('Bind for')) {
+                const portMatch = error.message.match(/Bind for .*:(\d+) failed/)
+                const port = portMatch ? portMatch[1] : config.port
+                alert(`Port ${port} is already allocated. Please choose a different port.`)
+              } else {
+                alert('Failed to start service: ' + (error.message || 'Unknown error'))
+              }
             }
           }}
         />
@@ -391,9 +440,11 @@ export default function Dashboard() {
   if (loading) {
     return (
       <PageContent>
-        <LoadingContainer>
-          <LoadingSpinner />
-        </LoadingContainer>
+        {renderHeader()}
+        {renderSearchBar()}
+        {renderStatsGrid()}
+        {renderServicesSection()}
+        {renderHoneypotsSection()}
       </PageContent>
     )
   }
@@ -479,6 +530,53 @@ const ErrorMessage = styled.div`
   font-size: 0.75rem;
   margin-top: 0.25rem;
   font-weight: 500;
+`;
+
+const RefreshIndicator = styled.div`
+  color: #10b981;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  font-weight: 500;
+`;
+
+const SkeletonCard = styled.div`
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  
+  &::before {
+    content: '';
+    height: 20px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: 4px;
+  }
+  
+  &::after {
+    content: '';
+    height: 40px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: 4px;
+    animation-delay: 0.2s;
+  }
+  
+  @keyframes loading {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
 `;
 
 const HeaderActions = styled.div`
