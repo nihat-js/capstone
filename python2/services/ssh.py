@@ -122,18 +122,21 @@ def start(config):
     print("       " + " ".join(docker_run_cmd))
 
     try:
-        result = subprocess.run(docker_run_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        container_id = result.stdout.strip()
+        result = subprocess.run(docker_run_cmd, check=True, text=True)
+        # Since we removed capture_output, get container ID separately
+        get_id_cmd = ["docker", "ps", "-q", "--filter", f"name={container_name}"]
+        id_result = subprocess.run(get_id_cmd, capture_output=True, text=True)
+        container_id = id_result.stdout.strip()
         print(f"[SUCCESS] Container started with ID: {container_id}")
         print(f"[INFO] Logs will be available in: {ssh_log_dir}")
         print("[INFO] Log files: auth.log (login attempts), commands.log (user commands), messages (system)")
         return container_id, None
     except subprocess.CalledProcessError as e:
         print("[ERROR] Failed to start container.")
-        print(f"[STDERR] {e.stderr.strip()}")
+        error_message = str(e)
         
         # Check for port conflict and provide cleaner error message
-        if "port is already allocated" in e.stderr or "Bind for" in e.stderr:
+        if "port is already allocated" in error_message or "Bind for" in error_message:
             return None, f"Port {port} is already in use. Please choose a different port."
         
-        return None, f"Failed to start SSH: {e.stderr.strip()}"
+        return None, f"Failed to start SSH: {error_message}"

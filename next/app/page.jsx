@@ -386,10 +386,7 @@ export default function Dashboard() {
           <Shield size={48} />
           <EmptyTitle>No active honeypots</EmptyTitle>
           <EmptyDescription>Get started by creating your first honeypot.</EmptyDescription>
-          <EmptyButton onClick={() => setShowCreateModal(true)}>
-            <Plus size={16} />
-            Create Honeypot
-          </EmptyButton>
+      
         </EmptyState>
       )
     }

@@ -37,11 +37,14 @@ def start(config):
         "-c", "config_file=/etc/postgresql/postgresql.conf"
     ]
     try:
-        result = subprocess.run(docker_cmd, check=True, capture_output=True, text=True)
-        id = result.stdout.strip()
+        result = subprocess.run(docker_cmd, check=True, text=True)
+        # Since we removed capture_output, we need to get container ID differently
+        get_id_cmd = ["docker", "ps", "-q", "--filter", f"name={name}"]
+        id_result = subprocess.run(get_id_cmd, capture_output=True, text=True)
+        id = id_result.stdout.strip()
         return id, None  # ✅ success
     except subprocess.CalledProcessError as e:
-        error_message = e.stderr.strip() if e.stderr else str(e)
+        error_message = str(e)
         
         # Check for port conflict and provide cleaner error message
         if "port is already allocated" in error_message or "Bind for" in error_message:
