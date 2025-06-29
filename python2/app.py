@@ -1,9 +1,10 @@
 from flask import Flask, request, jsonify
 import services.postgres as postgres
+from functools import wraps
 import subprocess
 import services.mysql as mysql
 import services.phpmyadmin as phpmyadmin
-from functools import wraps
+import services.redis as redis
 
 app = Flask(__name__)
 
@@ -24,7 +25,8 @@ def with_json(f):
 DOCKER_SERVICES = {
     "postgres": postgres.start,
     "mysql": mysql.start,
-    "phpmyadmin": phpmyadmin.start
+    "phpmyadmin": phpmyadmin.start,
+    "redis" : redis.start
 }
 
 
@@ -59,11 +61,15 @@ def start_service():
 @app.route('/services/stop', methods=['POST'])
 @with_json
 def stop_service(data):
+
     if data.get("type") == "docker":
         subprocess.run(["docker", "stop", data["container_id"]])
-        services.filter(
-            lambda x: x["container_id"] != data["container_id"])
+        services = list(filter(
+            lambda x: x["container_id"] != data["container_id"],
+            services
+        ))
         return jsonify({"message": "Service stopped successfully"}), 200
+
     elif data.get("type") == "terminal":
         subprocess.run(["pkill", "-f", data["name"]])
         services[:] = [s for s in services if s["name"] != data["name"]]

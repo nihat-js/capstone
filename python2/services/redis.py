@@ -24,11 +24,11 @@ def start(config):
         print(f"🔑 Container ID: {container_id}")
         if password:
             print(f"🔐 Password: {password}")
-        return container_id
+        return container_id, None
     except subprocess.CalledProcessError as e:
         print("❌ Failed to start Redis")
         print(f"🔧 Error Message: {e.stderr.strip()}")
-        return None
+        return None, str(e.stderr.strip())
 
 # Example usage:
 # config = {
