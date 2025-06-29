@@ -19,6 +19,7 @@ import { StatsCard } from './components/StatsCard'
 import { CreateHoneypotModal } from './components/CreateHoneypotModal'
 import { LogsModal } from './components/LogsModal'
 import { ConfigurationModal } from './components/ConfigurationModal'
+import { NotificationModal } from './components/NotificationModal'
 import { apiService } from './services/api'
 // Temporarily commenting out fake data - will use real API data
 // import { generateFakeHoneypots, generateFakeStats, generateFakeHoneypotTypes } from './utils/fakeData'
@@ -39,6 +40,8 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState('')
   const [apiError, setApiError] = useState(null)
   const [lastRefresh, setLastRefresh] = useState(new Date())
+  const [notification, setNotification] = useState(null)
+  const [isHydrated, setIsHydrated] = useState(false)
 
   // Fetch real data from API
   const fetchServices = async () => {
@@ -89,6 +92,11 @@ export default function Dashboard() {
     // Refresh data every 4 seconds for auto-refresh (without loading state)
     const interval = setInterval(() => fetchServices(), 4000)
     return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    // Mark as hydrated to avoid hydration mismatch with dynamic content
+    setIsHydrated(true)
   }, [])
 
   // Event handlers
@@ -153,7 +161,7 @@ export default function Dashboard() {
         <HeaderSubtitle>
           Monitor and manage your honeypot infrastructure
           {apiError && <ErrorMessage>⚠️ {apiError}</ErrorMessage>}
-          {!apiError && (
+          {!apiError && isHydrated && (
             <RefreshIndicator>
               🔄 Auto-refresh every 4s | Last: {lastRefresh.toLocaleTimeString()}
             </RefreshIndicator>
@@ -279,7 +287,7 @@ export default function Dashboard() {
         onStop={() => handleStopHoneypot(honeypot)}
         onDelete={() => handleDeleteHoneypot(honeypot)}
         onViewLogs={() => {
-          setSelectedHoneypot(honeypot.id)
+          setSelectedHoneypot(honeypot)
           setShowLogsModal(true)
         }}
         onConfigure={() => handleServiceClick(availableServices.find(s => s.type === honeypot.type))}
@@ -414,13 +422,25 @@ export default function Dashboard() {
               
               // Check for port conflict error
               if (error.message && error.message.includes('port is already allocated')) {
-                alert(`Port ${config.port} is already in use. Please choose a different port.`)
+                setNotification({
+                  type: 'error',
+                  title: 'Port Conflict',
+                  message: `Port ${config.port} is already in use. Please choose a different port.`
+                })
               } else if (error.message && error.message.includes('Bind for')) {
                 const portMatch = error.message.match(/Bind for .*:(\d+) failed/)
                 const port = portMatch ? portMatch[1] : config.port
-                alert(`Port ${port} is already allocated. Please choose a different port.`)
+                setNotification({
+                  type: 'error',
+                  title: 'Port Conflict',
+                  message: `Port ${port} is already allocated. Please choose a different port.`
+                })
               } else {
-                alert('Failed to start service: ' + (error.message || 'Unknown error'))
+                setNotification({
+                  type: 'error',
+                  title: 'Failed to Start Service',
+                  message: error.message || 'An unknown error occurred while starting the service.'
+                })
               }
             }
           }}
@@ -429,8 +449,7 @@ export default function Dashboard() {
 
       {showLogsModal && selectedHoneypot && (
         <LogsModal
-          honeypotId={selectedHoneypot}
-          honeypotName={honeypots.find(h => h.id === selectedHoneypot)?.name || ''}
+          honeypot={selectedHoneypot}
           onClose={() => setShowLogsModal(false)}
         />
       )}
@@ -460,6 +479,15 @@ export default function Dashboard() {
         {renderEmptyStates()}
       </PageContent>
       {renderModals()}
+      
+      <NotificationModal
+        isOpen={!!notification}
+        onClose={() => setNotification(null)}
+        type={notification?.type}
+        title={notification?.title}
+        message={notification?.message}
+        onConfirm={notification?.onConfirm}
+      />
     </>
   )
 }
@@ -519,7 +547,7 @@ const HeaderTitle = styled.h1`
   margin: 0;
 `;
 
-const HeaderSubtitle = styled.p`
+const HeaderSubtitle = styled.div`
   color: #6b7280;
   margin: 0;
   font-size: 0.875rem;

@@ -1,9 +1,13 @@
 import subprocess
 import uuid
 import sys
+import os
+import tempfile
+
 def start(config):
     port, name = config["port"], config["name"]
     mysql_root_password = config.get("root_password", "root")  # Default root password
+    init_sql = config.get("init_sql", "")  # Optional initial SQL script
     name = name if name else "mysql"
     name += "_" + str(port) + "_" + str(uuid.uuid4())[:8]
     print("comes to here")
@@ -13,8 +17,29 @@ def start(config):
         "--name", name,
         "-e", f"MYSQL_ROOT_PASSWORD={mysql_root_password}",
         "-p", f"{port}:3306",
-        "mysql:latest"
     ]
+    
+    # If init SQL is provided, create a temporary file and mount it
+    temp_sql_file = None
+    if init_sql and init_sql.strip():
+        try:
+            # Create a temporary SQL file
+            temp_sql_file = tempfile.NamedTemporaryFile(mode='w', suffix='.sql', delete=False)
+            temp_sql_file.write(init_sql)
+            temp_sql_file.close()
+            
+            # Mount the SQL file to the container's init directory
+            docker_cmd.extend(["-v", f"{temp_sql_file.name}:/docker-entrypoint-initdb.d/init.sql"])
+            print(f"📄 Added initial SQL script: {len(init_sql)} characters")
+        except Exception as e:
+            print(f"⚠️ Warning: Failed to create init SQL file: {e}")
+            if temp_sql_file:
+                try:
+                    os.unlink(temp_sql_file.name)
+                except:
+                    pass
+    
+    docker_cmd.append("mysql:latest")
     
     try:
         result = subprocess.run(docker_cmd, check=True, capture_output=True, text=True)
@@ -23,8 +48,25 @@ def start(config):
         print(f"📦 Container name: {name}")
         print(f"🔑 Container ID: {container_id}")
         print(f"🔐 Root password: {mysql_root_password}")
+        if init_sql and init_sql.strip():
+            print(f"📄 Initial SQL script will be executed on first startup")
+        
+        # Clean up temp file after container starts (it's copied to container)
+        if temp_sql_file and os.path.exists(temp_sql_file.name):
+            try:
+                os.unlink(temp_sql_file.name)
+            except:
+                pass
+                
         return container_id, None
     except subprocess.CalledProcessError as e:
+        # Clean up temp file on error
+        if temp_sql_file and os.path.exists(temp_sql_file.name):
+            try:
+                os.unlink(temp_sql_file.name)
+            except:
+                pass
+                
         print("❌ Failed to start MySQL")
         error_message = e.stderr.strip() if e.stderr else str(e)
         print(f"🔧 Error Message: {error_message}")

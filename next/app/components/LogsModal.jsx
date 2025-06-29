@@ -1,35 +1,78 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { X, Download, RefreshCw, Search } from 'lucide-react';
+import { X, Download, RefreshCw, Search, Container, FileText } from 'lucide-react';
+import { apiService } from '../services/api';
+import { NotificationModal } from './NotificationModal';
 
-export function LogsModal({ honeypotId, honeypotName, onClose }) {
+export function LogsModal({ honeypot, onClose }) {
   const [logs, setLogs] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [logType, setLogType] = useState('container'); // 'container' or 'real'
+  const [realLogType, setRealLogType] = useState('auth'); // 'auth', 'commands', 'messages'
+  const [notification, setNotification] = useState(null);
 
   useEffect(() => {
-    fetchLogs();
+    if (logType === 'container') {
+      fetchContainerLogs();
+    } else {
+      fetchRealLogs();
+    }
     
     if (autoRefresh) {
-      const interval = setInterval(fetchLogs, 5000);
+      const interval = setInterval(() => {
+        if (logType === 'container') {
+          fetchContainerLogs();
+        } else {
+          fetchRealLogs();
+        }
+      }, 5000);
       return () => clearInterval(interval);
     }
-  }, [honeypotId, autoRefresh]);
+  }, [honeypot, autoRefresh, logType, realLogType]);
 
-  const fetchLogs = async () => {
+  const fetchContainerLogs = async () => {
+    if (!honeypot?.container_id) {
+      setLogs('No container ID available for this honeypot');
+      return;
+    }
+
+    setLoading(true);
     try {
-      const response = await fetch(`/api/honeypots/${honeypotId}/logs`);
-      const data = await response.json();
+      const data = await apiService.getContainerLogs(honeypot.container_id);
       
-      if (data.success) {
-        setLogs(data.logs || 'No logs available');
+      if (!data.error) {
+        setLogs(data.logs || 'No container logs available');
       } else {
-        setLogs('Failed to load logs');
+        setLogs(`Failed to load container logs: ${data.message}`);
       }
     } catch (error) {
-      console.error('Failed to fetch logs:', error);
-      setLogs('Error loading logs');
+      console.error('Failed to fetch container logs:', error);
+      setLogs(`Error loading container logs: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchRealLogs = async () => {
+    if (!honeypot?.container_id) {
+      setLogs('No container ID available for this honeypot');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const data = await apiService.getRealLogs(honeypot.container_id, realLogType);
+      
+      if (!data.error) {
+        setLogs(data.logs || `No ${realLogType} logs available yet`);
+      } else {
+        setLogs(`Failed to load ${realLogType} logs: ${data.message}`);
+      }
+    } catch (error) {
+      console.error('Failed to fetch real logs:', error);
+      setLogs(`Error loading ${realLogType} logs: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -37,18 +80,43 @@ export function LogsModal({ honeypotId, honeypotName, onClose }) {
 
   const downloadLogs = async () => {
     try {
-      const response = await fetch(`/api/honeypots/${honeypotId}/logs/download`);
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${honeypotName}_logs_${new Date().toISOString().split('T')[0]}.txt`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+      if (!logs || logs.trim() === '') {
+        setNotification({
+          type: 'warning',
+          title: 'No Logs to Download',
+          message: 'There are no logs available to download.'
+        });
+        return;
       }
+
+      const blob = new Blob([logs], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${honeypot.name}_${logType}_logs_${new Date().toISOString().split('T')[0]}.txt`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      setNotification({
+        type: 'success',
+        title: 'Logs Downloaded',
+        message: `${logType === 'container' ? 'Container' : 'Real'} logs have been downloaded successfully.`
+      });
     } catch (error) {
       console.error('Failed to download logs:', error);
+      setNotification({
+        type: 'error',
+        title: 'Download Failed',
+        message: 'Failed to download logs. Please try again.'
+      });
+    }
+  };
+
+  const refreshLogs = () => {
+    if (logType === 'container') {
+      fetchContainerLogs();
+    } else {
+      fetchRealLogs();
     }
   };
 
@@ -63,13 +131,17 @@ export function LogsModal({ honeypotId, honeypotName, onClose }) {
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <HeaderContent>
-            <ModalTitle>Logs - {honeypotName}</ModalTitle>
-            <HoneypotId>ID: {honeypotId}</HoneypotId>
+            <ModalTitle>Logs - {honeypot.name}</ModalTitle>
+            <HoneypotId>Container: {honeypot.container_id}</HoneypotId>
           </HeaderContent>
           <HeaderActions>
             <ActionButton onClick={() => setAutoRefresh(!autoRefresh)}>
               <RefreshCw size={16} />
               Auto-refresh: {autoRefresh ? 'ON' : 'OFF'}
+            </ActionButton>
+            <ActionButton onClick={refreshLogs} disabled={loading}>
+              <RefreshCw size={16} />
+              Refresh
             </ActionButton>
             <ActionButton onClick={downloadLogs}>
               <Download size={16} />
@@ -80,6 +152,46 @@ export function LogsModal({ honeypotId, honeypotName, onClose }) {
             </CloseButton>
           </HeaderActions>
         </ModalHeader>
+
+        <LogTypeSelector>
+          <LogTypeButton 
+            active={logType === 'container'} 
+            onClick={() => setLogType('container')}
+          >
+            <Container size={16} />
+            Container Logs
+          </LogTypeButton>
+          <LogTypeButton 
+            active={logType === 'real'} 
+            onClick={() => setLogType('real')}
+          >
+            <FileText size={16} />
+            Real Logs
+          </LogTypeButton>
+        </LogTypeSelector>
+
+        {logType === 'real' && honeypot?.type === 'ssh' && (
+          <RealLogTypeSelector>
+            <RealLogTypeButton 
+              active={realLogType === 'auth'} 
+              onClick={() => setRealLogType('auth')}
+            >
+              🔐 Auth Logs
+            </RealLogTypeButton>
+            <RealLogTypeButton 
+              active={realLogType === 'commands'} 
+              onClick={() => setRealLogType('commands')}
+            >
+              💻 Commands
+            </RealLogTypeButton>
+            <RealLogTypeButton 
+              active={realLogType === 'messages'} 
+              onClick={() => setRealLogType('messages')}
+            >
+              📝 Messages
+            </RealLogTypeButton>
+          </RealLogTypeSelector>
+        )}
 
         <SearchContainer>
           <SearchInputWrapper>
@@ -115,6 +227,15 @@ export function LogsModal({ honeypotId, honeypotName, onClose }) {
           </FooterInfo>
         </ModalFooter>
       </ModalContainer>
+
+      <NotificationModal
+        isOpen={!!notification}
+        onClose={() => setNotification(null)}
+        type={notification?.type}
+        title={notification?.title}
+        message={notification?.message}
+        onConfirm={notification?.onConfirm}
+      />
     </ModalOverlay>
   );
 }
@@ -207,6 +328,66 @@ const CloseButton = styled.button`
   &:hover {
     color: #374151;
     background: #f3f4f6;
+  }
+`;
+
+const LogTypeSelector = styled.div`
+  display: flex;
+  padding: 1rem 1.5rem 0 1.5rem;
+  gap: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 0;
+`;
+
+const LogTypeButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid ${props => props.active ? '#2563eb' : '#d1d5db'};
+  background: ${props => props.active ? '#2563eb' : 'white'};
+  color: ${props => props.active ? 'white' : '#374151'};
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: ${props => props.active ? '#1d4ed8' : '#f9fafb'};
+    border-color: ${props => props.active ? '#1d4ed8' : '#9ca3af'};
+  }
+
+  svg {
+    color: inherit;
+  }
+`;
+
+const RealLogTypeSelector = styled.div`
+  display: flex;
+  padding: 0.5rem 1.5rem;
+  gap: 0.5rem;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+`;
+
+const RealLogTypeButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid ${props => props.active ? '#059669' : '#d1d5db'};
+  background: ${props => props.active ? '#059669' : 'white'};
+  color: ${props => props.active ? 'white' : '#374151'};
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: ${props => props.active ? '#047857' : '#f9fafb'};
+    border-color: ${props => props.active ? '#047857' : '#9ca3af'};
   }
 `;
 

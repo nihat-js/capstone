@@ -1,4 +1,4 @@
-import { Database, Globe, Lock, Terminal, Server } from "lucide-react";
+import { Database, Globe, Lock, Terminal, Server, FileText } from "lucide-react";
 
 // Available services that match your Flask API
 export const availableServices = [
@@ -51,5 +51,15 @@ export const availableServices = [
     security: 'Web Authentication',
     monitoring: 'Web Request Logging',
     attackTypes: 'Web Attacks, Database Access'
+  },
+  {
+    id: 'ftp',
+    name: 'FTP Server',
+    type: 'ftp',
+    description: 'File Transfer Protocol honeypot for file access monitoring',
+    icon: FileText,
+    security: 'User Authentication',
+    monitoring: 'File Operations',
+    attackTypes: 'File Upload, Directory Listing'
   }
 ]
