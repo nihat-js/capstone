@@ -19,8 +19,6 @@ def health_check():
     return jsonify({'status': 'healthy', 'message': 'Flask API is running'})
 
 
-
-
 @app.route('/api/services', methods=['GET'])
 def get_available_services():
     """Get list of available services"""
