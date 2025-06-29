@@ -81,12 +81,12 @@ def start(config):
         return None, f"Failed to start MySQL: {error_message}"
 
 # Example usage:
-config = {
-    "name": "mysql",
-    "port": 3307,
-    "password": "securepass123"
-}
+# config = {
+#     "name": "mysql",
+#     "port": 3307,
+#     "password": "securepass123"
+# }
 
-start(config)
+# start(config)
 # container_id = start_mysql(config)
 # print(f"Container ID: {container_id}")

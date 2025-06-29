@@ -26,19 +26,20 @@ def start(config):
     os.makedirs(ftp_log_dir, exist_ok=True)
 
     docker_cmd = [
-        "docker", "run", "-d",
-        "--name", name,
-        "-e", f"FTP_USER={ftp_user}",
-        "-e", f"FTP_PASS={ftp_pass}",
-        "-e", "PASV_ADDRESS=127.0.0.1",  # for passive mode, use public IP in prod
-        "-e", "PASV_MIN_PORT=21100",
-        "-e", "PASV_MAX_PORT=21110",
-        "-p", f"{port}:21",
-        "-p", "21100-21110:21100-21110",  # passive port range
-        "-v", f"{ftp_data_dir}:/home/vsftpd",
-        "-v", f"{ftp_log_dir}:/var/log/vsftpd",
-        "fauria/vsftpd"
-    ]
+    "docker", "run", "-d",
+    "--name", name,
+    "-e", f"FTP_USER={ftp_user}",
+    "-e", f"FTP_PASS={ftp_pass}",
+    "-e", "FTP_ANONYMOUS_ENABLED=YES",  # <-- Enable anonymous login
+    "-e", "PASV_ADDRESS=127.0.0.1",
+    "-e", "PASV_MIN_PORT=21100",
+    "-e", "PASV_MAX_PORT=21110",
+    "-p", f"{port}:21",
+    "-p", "21100-21110:21100-21110",
+    "-v", f"{ftp_data_dir}:/home/vsftpd",
+    "-v", f"{ftp_log_dir}:/var/log/vsftpd",
+    "fauria/vsftpd"
+]
 
     try:
         result = subprocess.run(docker_cmd, check=True, text=True)
@@ -64,3 +65,9 @@ def start(config):
             return None, f"Port {port} is already in use. Please choose a different port."
         
         return None, f"Failed to start FTP: {error_message}"
+
+
+# start({
+#     "port":2121,
+#     "name" : "haha"
+# })
