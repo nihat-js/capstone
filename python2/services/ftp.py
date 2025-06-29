@@ -1,7 +1,7 @@
 import subprocess
 import uuid
 import os
-
+import sys
 config = {
     "name": "ftp",
     "port": 2121,
@@ -41,7 +41,7 @@ def start(config):
     ]
 
     try:
-        result = subprocess.run(docker_cmd, check=True, capture_output=True, text=True)
+        result = subprocess.run(docker_cmd, check=True, capture_output=True, text=True, stdout=sys.stdout, stderr=sys.stderr)
         container_id = result.stdout.strip()
         print(f"✅ FTP Server running on port {port}")
         print(f"📦 Container name: {name}")

@@ -1,5 +1,6 @@
 import subprocess
 import uuid
+import sys
 
 def start(config):
     port, name = config["port"], config.get("name", "redis")
@@ -17,7 +18,7 @@ def start(config):
         docker_cmd.append("redis:latest")
 
     try:
-        result = subprocess.run(docker_cmd, check=True, capture_output=True, text=True)
+        result = subprocess.run(docker_cmd, check=True, capture_output=True, text=True, stdout=sys.stdout, stderr=sys.stderr)
         container_id = result.stdout.strip()
         print(f"✅ Redis running on port {port}")
         print(f"📦 Container name: {name}")

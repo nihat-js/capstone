@@ -5,10 +5,21 @@ import subprocess
 import services.mysql as mysql
 import services.phpmyadmin as phpmyadmin
 import services.redis as redis
-
+import services.ssh as ssh
 app = Flask(__name__)
 
 services = []
+
+
+
+DOCKER_SERVICES = {
+    "ssh" : ssh.start,
+    "postgres": postgres.start,
+    "mysql": mysql.start,
+    "phpmyadmin": phpmyadmin.start,
+    "redis" : redis.start
+}
+
 
 
 def with_json(f):
@@ -20,14 +31,6 @@ def with_json(f):
             return jsonify({"error": "Invalid or missing JSON"}), 400
         return f(data, *args, **kwargs)
     return decorated_function
-
-
-DOCKER_SERVICES = {
-    "postgres": postgres.start,
-    "mysql": mysql.start,
-    "phpmyadmin": phpmyadmin.start,
-    "redis" : redis.start
-}
 
 
 @app.route('/services', methods=['GET'])

@@ -1,7 +1,6 @@
 import subprocess
 import uuid
-
-
+import sys
 
 config = {
     "name": "phpmyadmin" ,
@@ -20,7 +19,7 @@ def start(config):
         "phpmyadmin/phpmyadmin"
     ]
     try:
-        result = subprocess.run(docker_cmd, check=True, capture_output=True, text=True)
+        result = subprocess.run(docker_cmd, check=True, capture_output=True, text=True, stdout=sys.stdout, stderr=sys.stderr)
         container_id = result.stdout.strip()
         print(f"✅ phpMyAdmin running at http://localhost:{port}")
         print(f"📦 Container name: {name}")

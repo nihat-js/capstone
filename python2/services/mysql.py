@@ -1,6 +1,6 @@
 import subprocess
 import uuid
-
+import sys
 def start(config):
     port, name = config["port"], config["name"]
     mysql_root_password = config.get("root_password", "root")  # Default root password
@@ -17,7 +17,7 @@ def start(config):
     ]
     
     try:
-        result = subprocess.run(docker_cmd, check=True, capture_output=True, text=True)
+        result = subprocess.run(docker_cmd, check=True, capture_output=True, text=True, stdout=sys.stdout,stderr=sys.stderr, )
         container_id = result.stdout.strip()
         print(f"✅ MySQL running on port {port}")
         print(f"📦 Container name: {name}")

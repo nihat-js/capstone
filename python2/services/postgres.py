@@ -1,7 +1,10 @@
 import subprocess
 import uuid
 import os
-from app_config import log_dir,tmp_dir
+import sys
+import json
+import sys
+from app_config import log_dir, tmp_dir
 
 
 def start(config):
@@ -34,13 +37,12 @@ def start(config):
         "-c", "config_file=/etc/postgresql/postgresql.conf"
     ]
     try:
-        result = subprocess.run(docker_cmd, check=True, capture_output=True, text=True)
+        result = subprocess.run(docker_cmd, check=True, capture_output=True, text=True,stdout=sys.stdout,stderr=sys.stderr, )
         id = result.stdout.strip()
         return id, None  # ✅ success
     except subprocess.CalledProcessError as e:
         error_message = e.stderr.strip()
         return None, error_message  # ❌ failure
-
 
 
 # Example usage:
