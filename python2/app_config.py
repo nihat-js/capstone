@@ -1,2 +1,2 @@
-log_dir = r"D:\Users\nihat2\Desktop\capstone\python2\logs"
-tmp_dir = r"D:\Users\nihat2\Desktop\capstone\python2\\tmp"
+log_dir = r"C:\Users\nihat\Desktop\capstone\logs"
+tmp_dir = r"C:\Users\nihat\Desktop\capstone\tmp"

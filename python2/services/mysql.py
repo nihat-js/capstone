@@ -6,7 +6,7 @@ import tempfile
 
 def start(config):
     port, name = config["port"], config["name"]
-    mysql_root_password = config.get("root_password", "root")  # Default root password
+    password = config.get("password", "root")  # Default root password
     init_sql = config.get("init_sql", "")  # Optional initial SQL script
     name = name if name else "mysql"
     name += "_" + str(port) + "_" + str(uuid.uuid4())[:8]
@@ -15,7 +15,7 @@ def start(config):
     docker_cmd = [
         "docker", "run", "-d",
         "--name", name,
-        "-e", f"MYSQL_ROOT_PASSWORD={mysql_root_password}",
+        "-e", f"MYSQL_ROOT_PASSWORD={password}",
         "-p", f"{port}:3306",
     ]
     
@@ -24,12 +24,12 @@ def start(config):
     if init_sql and init_sql.strip():
         try:
             # Create a temporary SQL file
-            temp_sql_file = tempfile.NamedTemporaryFile(mode='w', suffix='.sql', delete=False)
-            temp_sql_file.write(init_sql)
-            temp_sql_file.close()
+            # temp_sql_file = tempfile.NamedTemporaryFile(mode='w', suffix='.sql', delete=False)
+            # temp_sql_file.write(init_sql)
+            # temp_sql_file.close()
             
             # Mount the SQL file to the container's init directory
-            docker_cmd.extend(["-v", f"{temp_sql_file.name}:/docker-entrypoint-initdb.d/init.sql"])
+            # docker_cmd.extend(["-v", f"{temp_sql_file.name}:/docker-entrypoint-initdb.d/init.sql"])
             print(f"📄 Added initial SQL script: {len(init_sql)} characters")
         except Exception as e:
             print(f"⚠️ Warning: Failed to create init SQL file: {e}")
@@ -50,7 +50,7 @@ def start(config):
         print(f"✅ MySQL running on port {port}")
         print(f"📦 Container name: {name}")
         print(f"🔑 Container ID: {container_id}")
-        print(f"🔐 Root password: {mysql_root_password}")
+        print(f"🔐 Root password: {password}")
         if init_sql and init_sql.strip():
             print(f"📄 Initial SQL script will be executed on first startup")
         
@@ -81,10 +81,12 @@ def start(config):
         return None, f"Failed to start MySQL: {error_message}"
 
 # Example usage:
-# config = {
-#     "container_name": "mysql",
-#     "port": 3307,
-#     "root_password": "securepass123"
-# }
+config = {
+    "name": "mysql",
+    "port": 3307,
+    "password": "securepass123"
+}
+
+start(config)
 # container_id = start_mysql(config)
 # print(f"Container ID: {container_id}")
