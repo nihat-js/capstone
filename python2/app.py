@@ -6,12 +6,12 @@ import services.mysql as mysql
 import services.phpmyadmin as phpmyadmin
 import services.redis as redis
 import services.ssh as ssh
+from flask_cors import CORS
+
 app = Flask(__name__)
+CORS(app)
 
 services = []
-
-
-
 DOCKER_SERVICES = {
     "ssh" : ssh.start,
     "postgres": postgres.start,

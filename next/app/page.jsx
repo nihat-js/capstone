@@ -19,14 +19,15 @@ import { StatsCard } from './components/StatsCard'
 import { CreateHoneypotModal } from './components/CreateHoneypotModal'
 import { LogsModal } from './components/LogsModal'
 import { ConfigurationModal } from './components/ConfigurationModal'
-import { generateFakeHoneypots, generateFakeStats, generateFakeHoneypotTypes } from './utils/fakeData'
+import { apiService } from './services/api'
+// Temporarily commenting out fake data - will use real API data
+// import { generateFakeHoneypots, generateFakeStats, generateFakeHoneypotTypes } from './utils/fakeData'
 import { availableServices } from './config/availableServices'
 export default function Dashboard() {
   const router = useRouter()
   const [honeypots, setHoneypots] = useState([])
   const [runningHoneypots, setRunningHoneypots] = useState({})
-  const [stats, setStats] = useState({ total: 0, running: 0, stopped: 0 })
-  const [honeypotTypes, setHoneypotTypes] = useState({})
+  const [stats, setStats] = useState({ total: 0, running: 0, stopped: 0, connectionsToday: 0, attacksBlocked: 0 })
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showLogsModal, setShowLogsModal] = useState(false)
@@ -36,17 +37,55 @@ export default function Dashboard() {
   const [showAllServices, setShowAllServices] = useState(false)
   const [showAllHoneypots, setShowAllHoneypots] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [apiError, setApiError] = useState(null)
 
-  // Fake data for demo
-  const fakeHoneypots = generateFakeHoneypots()
-  const fakeStats = generateFakeStats(fakeHoneypots)
-  const fakeTypes = generateFakeHoneypotTypes()
+  // Fetch real data from API
+  const fetchServices = async () => {
+    try {
+      setLoading(true)
+      setApiError(null)
+      
+      const services = await apiService.getServices()
+      
+      // Transform API data to match our honeypot format
+      const transformedHoneypots = services.map((service, index) => ({
+        id: service.container_id || `service-${index}`,
+        name: `${service.name}-${service.config?.port || 'unknown'}`,
+        type: service.name?.toLowerCase(),
+        status: 'running', // All services from API are running
+        created_at: new Date().toISOString(),
+        config: service.config,
+        container_id: service.container_id
+      }))
+      
+      setHoneypots(transformedHoneypots)
+      
+      // Calculate real stats
+      const realStats = {
+        total: transformedHoneypots.length,
+        running: transformedHoneypots.filter(h => h.status === 'running').length,
+        stopped: transformedHoneypots.filter(h => h.status === 'stopped').length,
+        connectionsToday: 0, // Will need additional API endpoint for this
+        attacksBlocked: 0    // Will need additional API endpoint for this
+      }
+      setStats(realStats)
+      
+    } catch (error) {
+      console.error('Failed to fetch services:', error)
+      setApiError('Failed to connect to API. Make sure the Flask server is running on localhost:5000')
+      // Set empty data on error
+      setHoneypots([])
+      setStats({ total: 0, running: 0, stopped: 0, connectionsToday: 0, attacksBlocked: 0 })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    setHoneypots(fakeHoneypots)
-    setStats(fakeStats)
-    setHoneypotTypes(fakeTypes)
-    setLoading(false)
+    fetchServices()
+    // Refresh data every 30 seconds
+    const interval = setInterval(fetchServices, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   // Event handlers
@@ -55,8 +94,41 @@ export default function Dashboard() {
     setShowConfigModal(true)
   }
 
-  const handleHoneypotCreated = () => {
+  const handleHoneypotCreated = async () => {
     setShowCreateModal(false)
+    // Refresh the services list
+    await fetchServices()
+  }
+
+  const handleStartHoneypot = async (honeypot) => {
+    try {
+      console.log('Starting honeypot:', honeypot.id)
+      // API call would go here when start functionality is implemented
+    } catch (error) {
+      console.error('Failed to start honeypot:', error)
+    }
+  }
+
+  const handleStopHoneypot = async (honeypot) => {
+    try {
+      await apiService.stopService({
+        type: 'docker',
+        container_id: honeypot.container_id
+      })
+      // Refresh the services list
+      await fetchServices()
+    } catch (error) {
+      console.error('Failed to stop honeypot:', error)
+    }
+  }
+
+  const handleDeleteHoneypot = async (honeypot) => {
+    try {
+      // First stop the service, then it will be removed from the list
+      await handleStopHoneypot(honeypot)
+    } catch (error) {
+      console.error('Failed to delete honeypot:', error)
+    }
   }
 
   // Filter functions
@@ -74,8 +146,11 @@ export default function Dashboard() {
   const renderHeader = () => (
     <DashboardHeader>
       <HeaderLeft>
-        <HeaderTitle>Dashboard</HeaderTitle>
-        <HeaderSubtitle>Monitor and manage your honeypot infrastructure</HeaderSubtitle>
+        <HeaderTitle>Honeypot Dashboard</HeaderTitle>
+        <HeaderSubtitle>
+          Monitor and manage your honeypot infrastructure
+          {apiError && <ErrorMessage>⚠️ {apiError}</ErrorMessage>}
+        </HeaderSubtitle>
       </HeaderLeft>
     </DashboardHeader>
   )
@@ -169,22 +244,29 @@ export default function Dashboard() {
     )
   }
 
-  const renderHoneypotCard = (honeypot) => (
-    <HoneypotCard
-      key={honeypot.id}
-      honeypot={{
-        ...honeypot,
-        status: honeypot.status,
-        created_at: honeypot.created_at || honeypot.created
-      }}
-      honeypotType={honeypotTypes[honeypot.type]}
-      onStart={() => console.log('Start honeypot:', honeypot.id)}
-      onStop={() => console.log('Stop honeypot:', honeypot.id)}
-      onDelete={() => console.log('Delete honeypot:', honeypot.id)}
-      onViewLogs={() => console.log('View logs:', honeypot.id)}
-      onConfigure={() => handleServiceClick(availableServices.find(s => s.type === honeypot.type))}
-    />
-  )
+  const renderHoneypotCard = (honeypot) => {
+    const serviceType = availableServices.find(s => s.type === honeypot.type)
+    
+    return (
+      <HoneypotCard
+        key={honeypot.id}
+        honeypot={{
+          ...honeypot,
+          status: honeypot.status,
+          created_at: honeypot.created_at || honeypot.created
+        }}
+        honeypotType={serviceType}
+        onStart={() => handleStartHoneypot(honeypot)}
+        onStop={() => handleStopHoneypot(honeypot)}
+        onDelete={() => handleDeleteHoneypot(honeypot)}
+        onViewLogs={() => {
+          setSelectedHoneypot(honeypot.id)
+          setShowLogsModal(true)
+        }}
+        onConfigure={() => handleServiceClick(availableServices.find(s => s.type === honeypot.type))}
+      />
+    )
+  }
 
   const renderHoneypotsSection = () => {
     if (filteredHoneypots.length === 0) return null
@@ -229,6 +311,19 @@ export default function Dashboard() {
   }
 
   const renderEmptyStates = () => {
+    if (apiError) {
+      return (
+        <EmptyState>
+          <Shield size={48} />
+          <EmptyTitle>API Connection Failed</EmptyTitle>
+          <EmptyDescription>{apiError}</EmptyDescription>
+          <EmptyButton onClick={fetchServices}>
+            Retry Connection
+          </EmptyButton>
+        </EmptyState>
+      )
+    }
+
     if (filteredHoneypots.length === 0 && honeypots.length > 0) {
       return (
         <EmptyState>
@@ -239,11 +334,11 @@ export default function Dashboard() {
       )
     }
 
-    if (honeypots.length === 0) {
+    if (honeypots.length === 0 && !loading) {
       return (
         <EmptyState>
           <Shield size={48} />
-          <EmptyTitle>No honeypots</EmptyTitle>
+          <EmptyTitle>No active honeypots</EmptyTitle>
           <EmptyDescription>Get started by creating your first honeypot.</EmptyDescription>
           <EmptyButton onClick={() => setShowCreateModal(true)}>
             <Plus size={16} />
@@ -260,9 +355,10 @@ export default function Dashboard() {
     <>
       {showCreateModal && (
         <CreateHoneypotModal
-          honeypotTypes={honeypotTypes}
+          availableServices={availableServices}
           onClose={() => setShowCreateModal(false)}
           onSuccess={handleHoneypotCreated}
+          apiService={apiService}
         />
       )}
 
@@ -270,7 +366,15 @@ export default function Dashboard() {
         <ConfigurationModal
           service={selectedService}
           onClose={() => setShowConfigModal(false)}
-          onSave={() => setShowConfigModal(false)}
+          onSave={async (config) => {
+            try {
+              await apiService.startService(config)
+              await fetchServices()
+              setShowConfigModal(false)
+            } catch (error) {
+              console.error('Failed to start service:', error)
+            }
+          }}
         />
       )}
 
@@ -368,6 +472,13 @@ const HeaderSubtitle = styled.p`
   color: #6b7280;
   margin: 0;
   font-size: 0.875rem;
+`;
+
+const ErrorMessage = styled.div`
+  color: #ef4444;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  font-weight: 500;
 `;
 
 const HeaderActions = styled.div`
