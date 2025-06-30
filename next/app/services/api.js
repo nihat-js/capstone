@@ -69,6 +69,20 @@ class ApiService {
   async getRealLogs(containerId, logType = 'auth') {
     return this.request(`/services/${containerId}/reallogs?type=${logType}`);
   }
+
+  // Get structured logs for a service
+  async getStructuredLogs(serviceId, options = {}) {
+    const params = new URLSearchParams();
+    
+    if (options.type) params.append('type', options.type);
+    if (options.limit) params.append('limit', options.limit.toString());
+    if (options.level) params.append('level', options.level);
+    
+    const query = params.toString();
+    const endpoint = `/services/${serviceId}/structured_logs${query ? `?${query}` : ''}`;
+    
+    return this.request(endpoint);
+  }
 }
 
 export const apiService = new ApiService();

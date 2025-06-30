@@ -13,6 +13,7 @@ const getServiceIcon = (type) => {
     case 'redis': return <Server size={20} />
     case 'phpmyadmin': return <Globe size={20} />
     case 'ftp': return <Server size={20} />
+    case 'api': return <Globe size={20} />
     default: return <Server size={20} />
   }
 }
@@ -25,6 +26,7 @@ function getDefaultPort(serviceType) {
     case 'redis': return 6379
     case 'phpmyadmin': return 8080
     case 'ftp': return 2121
+    case 'api': return 8080
     default: return 8000
   }
 }
@@ -40,7 +42,9 @@ export function ConfigurationModal({ service, onClose, onSave }) {
     redisPassword: service.type === 'redis' ? '' : '',
     user: service.type === 'ftp' ? 'ftpuser' : '',
     ftpPassword: service.type === 'ftp' ? 'ftppass' : '',
-    banner: service.type === 'ssh' ? 'Welcome to the SSH honeypot server' : ''
+    banner: service.type === 'ssh' ? 'Welcome to the SSH honeypot server' : '',
+    api_key: service.type === 'api' ? 'HONEYPOT-API-KEY-' + Math.random().toString(36).substr(2, 9).toUpperCase() : '',
+    admin_email: service.type === 'api' ? 'admin@honeypot.local' : ''
   })
   const [isSaving, setIsSaving] = useState(false)
   const [savingProgress, setSavingProgress] = useState(0)

@@ -1,27 +1,38 @@
 from flask import Flask, request, jsonify
-import services.postgres as postgres
 from functools import wraps
-import subprocess
-import services.mysql as mysql
-import services.phpmyadmin as phpmyadmin
-import services.redis as redis
-import services.ssh as ssh
-import services.ftp as ftp
 from flask_cors import CORS
+from datetime import datetime
+from dotenv import load_dotenv
+import os
+import subprocess
 
+import services.ssh.index as ssh
+import services.api as api
+import services.mysql as mysql
+
+import services.api.log_extractor as api_log_extractor
+import services.ssh._log_extractor as ssh_log_extractor
+
+
+load_dotenv()
 app = Flask(__name__)
 CORS(app)
-
 services = []
+log_dir = os.getenv("LOG_DIR")
+
 DOCKER_SERVICES = {
     "ssh" : ssh.start,
-    "postgres": postgres.start,
-    "mysql": mysql.start,
-    "phpmyadmin": phpmyadmin.start,
-    "redis" : redis.start,
-    "ftp": ftp.start
+    # "postgres": postgres.start,
+    # "mysql": service.start,
+    # "phpmyadmin": phpmyadmin.start,
+    # "redis" : redis.start,
+    # "ftp": ftp.start
 }
 
+PROCESS_SERVICES = {
+    # "api": api_service.start,
+    # "rdp" : rdp_service.start,
+}
 
 
 def with_json(f):
@@ -60,6 +71,17 @@ def start_service():
                 "name": name,
                 "config": config})
             return jsonify({"error": False, "container_id": container_id}), 200
+    elif name.lower() in PROCESS_SERVICES:
+        process_id, error_message = PROCESS_SERVICES[name.lower()](config)
+        if error_message:
+            return jsonify({"error": error_message}), 500
+        else:
+            services.append({
+                "type": "process",
+                "process_id": process_id,
+                "name": name,
+                "config": config})
+            return jsonify({"error": False, "process_id": process_id}), 200
     else:
         return jsonify({"error": "Service not recognized"}), 400
 
@@ -68,37 +90,47 @@ def start_service():
 @with_json
 def stop_service(data):
     global services
-    
+
     if data.get("type") == "docker":
         subprocess.run(["docker", "stop", data["container_id"]])
         services = list(filter(
             lambda x: x["container_id"] != data["container_id"],
             services
         ))
-        return jsonify({"message": "Service stopped successfully"}), 200
-
-    elif data.get("type") == "terminal":
-        subprocess.run(["pkill", "-f", data["name"]])
-        services[:] = [s for s in services if s["name"] != data["name"]]
-        return jsonify({"message": "Service stopped successfully"}), 200
+        return jsonify({"error": False}), 200
+    elif data.get("type") == "process":
+        # Stop process using the process_id
+        process_id = data.get("process_id")
+        if process_id:
+            # Import the API service to use its stop function
+            success = api_service.stop(process_id)
+            if success:
+                services = list(filter(
+                    lambda x: x.get("process_id") != process_id,
+                    services
+                ))
+                return jsonify({"error": False}), 200
+            else:
+                return jsonify({"error": "Failed to stop process"}), 500
+        else:
+            return jsonify({"error": "Process ID required"}), 400
+    else:
+        return jsonify({"error": "Invalid service type"}), 400
 
 
 @app.route('/services/<container_id>/logs', methods=['GET'])
-def get_container_logs(container_id):
+def get_logs(container_id):
     try:
-        # Get Docker container logs
         result = subprocess.run(
-            ["docker", "logs", container_id], 
-            capture_output=True, 
-            text=True, 
-            timeout=30  # 30 second timeout
+            ["docker", "logs", container_id],
+            capture_output=True, text=True, timeout=10
         )
-        
+
         if result.returncode == 0:
             logs = result.stdout
             if result.stderr:
                 logs += "\n--- STDERR ---\n" + result.stderr
-            
+
             return jsonify({
                 "error": False,
                 "logs": logs,
@@ -109,7 +141,7 @@ def get_container_logs(container_id):
                 "error": True,
                 "message": f"Failed to get logs: {result.stderr}"
             }), 500
-            
+
     except subprocess.TimeoutExpired:
         return jsonify({
             "error": True,
@@ -122,102 +154,26 @@ def get_container_logs(container_id):
         }), 500
 
 
-@app.route('/services/<container_id>/reallogs', methods=['GET'])
-def get_real_logs(container_id):
-    try:
-        # Find the service in our services list to get log directory
-        service = None
-        for s in services:
-            if s.get("container_id") == container_id:
-                service = s
-                break
-        
-        if not service:
-            return jsonify({
-                "error": True,
-                "message": "Service not found"
-            }), 404
-        
-        # Get log type from query parameter (auth, commands, messages)
-        log_type = request.args.get('type', 'auth')
-        
-        # Construct log file path based on service type and log type
-        if service.get("name") == "ssh":
-            from app_config import log_dir
-            import os
-            
-            # Get container name from our service config
-            container_name = None
-            for existing_service in services:
-                if existing_service.get("container_id") == container_id:
-                    # Extract container name from config or construct it
-                    config = existing_service.get("config", {})
-                    port = config.get("port")
-                    # Find the actual container name
-                    result = subprocess.run(
-                        ["docker", "inspect", "--format={{.Name}}", container_id],
-                        capture_output=True, text=True
-                    )
-                    if result.returncode == 0:
-                        container_name = result.stdout.strip().lstrip('/')
-                    break
-            
-            if not container_name:
-                return jsonify({
-                    "error": True,
-                    "message": "Could not determine container name"
-                }), 500
-            
-            log_file_map = {
-                "auth": "auth.log",
-                "commands": "commands.log", 
-                "messages": "messages"
-            }
-            
-            if log_type not in log_file_map:
-                return jsonify({
-                    "error": True,
-                    "message": f"Invalid log type. Available: {list(log_file_map.keys())}"
-                }), 400
-            
-            log_file_path = os.path.join(log_dir, "ssh", container_name, log_file_map[log_type])
-            
-            try:
-                if os.path.exists(log_file_path):
-                    with open(log_file_path, 'r') as f:
-                        logs = f.read()
-                    
-                    return jsonify({
-                        "error": False,
-                        "logs": logs,
-                        "log_type": log_type,
-                        "container_id": container_id,
-                        "log_file": log_file_path
-                    }), 200
-                else:
-                    return jsonify({
-                        "error": False,
-                        "logs": f"Log file {log_file_path} not found yet. Container may still be starting or no activity has occurred.",
-                        "log_type": log_type,
-                        "container_id": container_id
-                    }), 200
-                    
-            except Exception as e:
-                return jsonify({
-                    "error": True,
-                    "message": f"Error reading log file: {str(e)}"
-                }), 500
-        else:
-            return jsonify({
-                "error": True,
-                "message": f"Real logs not implemented for service type: {service.get('name')}"
-            }), 400
-            
-    except Exception as e:
+
+
+@app.route('/services/<type>/reallogs', methods=['GET'])
+def get_real_logs(type):
+    if type == "api":
+        print("bura geldi")
+        data = api_log_extractor.extract_api_logs()
         return jsonify({
-            "error": True,
-            "message": f"Error fetching real logs: {str(e)}"
-        }), 500
+            "error": False,
+            "message": "API logs extracted successfully",
+            "data": data
+        }), 200
+    elif type == "ssh":
+        # Assuming ssh service has a log extractor
+        ssh_log_extractor.extract_ssh_logs()
+        return jsonify({
+            "error": False,
+            "message": "SSH logs extracted successfully"
+        }), 200
 
 
-app.run(host="localhost", port=5000, debug=True)
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)

@@ -2,8 +2,9 @@ import subprocess
 import uuid
 import os
 import sys
-from app_config import log_dir, tmp_dir
 
+log_dir = os.getenv("LOG_DIR")
+tmp_dir = os.getenv("TMP_DIR")
 
 def start(config):
     port = config["port"]

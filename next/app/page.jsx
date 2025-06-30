@@ -18,12 +18,13 @@ import { HoneypotCard } from "./components/HoneypotCard"
 import { StatsCard } from './components/StatsCard'
 import { CreateHoneypotModal } from './components/CreateHoneypotModal'
 import { LogsModal } from './components/LogsModal'
+import { LogsViewerModal } from './components/LogsViewerModal'
 import { ConfigurationModal } from './components/ConfigurationModal'
 import { NotificationModal } from './components/NotificationModal'
 import { apiService } from './services/api'
 // Temporarily commenting out fake data - will use real API data
 // import { generateFakeHoneypots, generateFakeStats, generateFakeHoneypotTypes } from './utils/fakeData'
-import { availableServices } from './config/availableServices'
+import { availableServices, serviceCategories } from './config/availableServices'
 export default function Dashboard() {
   const router = useRouter()
   const [honeypots, setHoneypots] = useState([])
@@ -32,6 +33,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showLogsModal, setShowLogsModal] = useState(false)
+  const [showLogsViewer, setShowLogsViewer] = useState(false)
   const [showConfigModal, setShowConfigModal] = useState(false)
   const [selectedHoneypot, setSelectedHoneypot] = useState(null)
   const [selectedService, setSelectedService] = useState(null)
@@ -233,9 +235,57 @@ export default function Dashboard() {
     </ServiceCard>
   )
 
+  const renderCategoryCard = (categoryKey, category) => (
+    <CategorySection key={categoryKey}>
+      <CategoryHeader>
+        <CategoryIcon style={{ backgroundColor: category.color }}>
+          <category.icon size={20} />
+        </CategoryIcon>
+        <CategoryInfo>
+          <CategoryName>{category.name}</CategoryName>
+          <CategoryDescription>{category.description}</CategoryDescription>
+        </CategoryInfo>
+        <ServiceCount>{category.services.length} services</ServiceCount>
+      </CategoryHeader>
+      <CategoryServicesGrid>
+        {category.services
+          .filter(service => 
+            service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            service.description.toLowerCase().includes(searchTerm.toLowerCase())
+          )
+          .map(service => (
+            <ServiceCard key={service.id} onClick={() => handleServiceClick(service)}>
+              <ServiceHeader>
+                <ServiceIcon style={{ background: `linear-gradient(135deg, ${category.color}, ${category.color}CC)` }}>
+                  <service.icon size={18} />
+                </ServiceIcon>
+                <ServiceInfo>
+                  <ServiceName>{service.name}</ServiceName>
+                  <ServiceDescription>{service.description}</ServiceDescription>
+                </ServiceInfo>
+              </ServiceHeader>
+              <ServiceDetails>
+                <ServiceFeature>
+                  <Shield size={16} />
+                  {service.security}
+                </ServiceFeature>
+                <ServiceFeature>
+                  <Activity size={16} />
+                  {service.monitoring}
+                </ServiceFeature>
+                <ServiceFeature>
+                  <Target size={16} />
+                  {service.attackTypes}
+                </ServiceFeature>
+              </ServiceDetails>
+            </ServiceCard>
+          ))
+        }
+      </CategoryServicesGrid>
+    </CategorySection>
+  )
+
   const renderServicesSection = () => {
-    const displayedServices = showAllServices ? filteredServices : filteredServices.slice(0, 3)
-    
     return (
       <ServicesSection>
         <SectionHeader>
@@ -244,29 +294,15 @@ export default function Dashboard() {
             Create Honeypot
           </SectionTitle>
           <SectionSubtitle>
-            Choose a service to configure and deploy your honeypot
+            Choose a service category and configure your honeypot
           </SectionSubtitle>
         </SectionHeader>
 
-        <ServicesGrid>
-          {displayedServices.map(renderServiceCard)}
-        </ServicesGrid>
-
-        {filteredServices.length > 3 && (
-          <ShowMoreButton onClick={() => setShowAllServices(!showAllServices)}>
-            {showAllServices ? (
-              <>
-                <ChevronUp size={16} />
-                Show Less
-              </>
-            ) : (
-              <>
-                <ChevronDown size={16} />
-                Show All ({filteredServices.length - 3} more)
-              </>
-            )}
-          </ShowMoreButton>
-        )}
+        <CategoriesContainer>
+          {Object.entries(serviceCategories).map(([key, category]) => 
+            renderCategoryCard(key, category)
+          )}
+        </CategoriesContainer>
       </ServicesSection>
     )
   }
@@ -288,7 +324,7 @@ export default function Dashboard() {
         onDelete={() => handleDeleteHoneypot(honeypot)}
         onViewLogs={() => {
           setSelectedHoneypot(honeypot)
-          setShowLogsModal(true)
+          setShowLogsViewer(true)
         }}
         onConfigure={() => handleServiceClick(availableServices.find(s => s.type === honeypot.type))}
       />
@@ -448,6 +484,13 @@ export default function Dashboard() {
         <LogsModal
           honeypot={selectedHoneypot}
           onClose={() => setShowLogsModal(false)}
+        />
+      )}
+
+      {showLogsViewer && selectedHoneypot && (
+        <LogsViewerModal
+          service={selectedHoneypot}
+          onClose={() => setShowLogsViewer(false)}
         />
       )}
     </>
@@ -720,9 +763,17 @@ const HoneypotsSection = styled.div`
 
 const HoneypotsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
   margin-bottom: 1rem;
+  
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const ShowMoreButton = styled.button`
@@ -803,9 +854,17 @@ const ServicesSection = styled.div`
 
 const ServicesGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
   margin-bottom: 1rem;
+  
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const ServiceCard = styled.div`
@@ -818,8 +877,9 @@ const ServiceCard = styled.div`
   cursor: pointer;
 
   &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    border-color: #d1d5db;
   }
 `;
 
@@ -831,8 +891,8 @@ const ServiceHeader = styled.div`
 `;
 
 const ServiceIcon = styled.div`
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   background: linear-gradient(135deg, #2563eb, #3b82f6);
   border-radius: 8px;
   display: flex;
@@ -878,4 +938,72 @@ const ServiceFeature = styled.div`
     color: #6b7280;
     flex-shrink: 0;
   }
+`;
+
+// Category-specific styled components
+const CategoriesContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+`;
+
+const CategorySection = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e5e7eb;
+`;
+
+const CategoryHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f3f4f6;
+`;
+
+const CategoryIcon = styled.div`
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+`;
+
+const CategoryInfo = styled.div`
+  flex: 1;
+`;
+
+const CategoryName = styled.h3`
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 0.25rem 0;
+`;
+
+const CategoryDescription = styled.p`
+  color: #6b7280;
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+`;
+
+const ServiceCount = styled.div`
+  background: #f3f4f6;
+  color: #374151;
+  padding: 0.375rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+`;
+
+const CategoryServicesGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
 `;
