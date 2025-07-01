@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y openssh-server sudo rsyslog && \
@@ -17,7 +17,7 @@ RUN echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && \
     echo 'ChallengeResponseAuthentication no' >> /etc/ssh/sshd_config && \
     echo 'UsePAM yes' >> /etc/ssh/sshd_config
 
-# Create users
+# Create users first
 RUN useradd -m james && echo 'james:james' | chpasswd && usermod -aG sudo james && mkdir -p /home/james/.ssh && chmod 700 /home/james/.ssh
 RUN useradd -m nihat && echo 'nihat:nihat' | chpasswd && mkdir -p /home/nihat/.ssh && chmod 700 /home/nihat/.ssh
 
@@ -26,33 +26,39 @@ RUN useradd -m nihat && echo 'nihat:nihat' | chpasswd && mkdir -p /home/nihat/.s
 RUN chmod 644 /etc/passwd && \
     chmod 640 /etc/shadow
 
-# Logging setup
-RUN echo 'auth,authpriv.*    /var/log/honeypot/auth.log' >> /etc/rsyslog.conf && \
-    echo '*.info;mail.none;authpriv.none;cron.none    /var/log/honeypot/messages' >> /etc/rsyslog.conf && \
-    mkdir -p /var/log/honeypot && \
-    touch /var/log/honeypot/auth.log /var/log/honeypot/messages /var/log/honeypot/commands.log && \
-    chmod 666 /var/log/honeypot/commands.log
+# Create log directory with proper permissions FROM START
+RUN mkdir -p /var/log/ssh && \
+    touch /var/log/ssh/auth.log /var/log/ssh/messages /var/log/ssh/commands.log && \
+    chmod 777 /var/log/ssh && \
+    chmod 777 /var/log/ssh/commands.log && \
+    chmod 777 /var/log/ssh/auth.log && \
+    chmod 777 /var/log/ssh/messages && \
+    ls -la /var/log/ssh/
 
-# Create command logging setup with a custom bash wrapper
-RUN echo '#!/bin/bash' > /usr/local/bin/honeypot_shell.sh && \
-    echo 'LOGFILE="/var/log/honeypot/commands.log"' >> /usr/local/bin/honeypot_shell.sh && \
-    echo 'echo "$(date +%Y-%m-%d\ %H:%M:%S) Session started for user $USER from $SSH_CLIENT" >> $LOGFILE' >> /usr/local/bin/honeypot_shell.sh && \
-    echo 'export PS1="$USER@honeypot:~$ "' >> /usr/local/bin/honeypot_shell.sh && \
-    echo 'while true; do' >> /usr/local/bin/honeypot_shell.sh && \
-    echo '  read -e -p "$PS1" cmd' >> /usr/local/bin/honeypot_shell.sh && \
-    echo '  if [[ "$cmd" == "exit" ]]; then' >> /usr/local/bin/honeypot_shell.sh && \
-    echo '    echo "$(date +%Y-%m-%d\ %H:%M:%S) $USER: exit" >> $LOGFILE' >> /usr/local/bin/honeypot_shell.sh && \
-    echo '    break' >> /usr/local/bin/honeypot_shell.sh && \
-    echo '  fi' >> /usr/local/bin/honeypot_shell.sh && \
-    echo '  if [[ -n "$cmd" ]]; then' >> /usr/local/bin/honeypot_shell.sh && \
-    echo '    echo "$(date +%Y-%m-%d\ %H:%M:%S) $USER: $cmd" >> $LOGFILE' >> /usr/local/bin/honeypot_shell.sh && \
-    echo '    eval "$cmd"' >> /usr/local/bin/honeypot_shell.sh && \
-    echo '  fi' >> /usr/local/bin/honeypot_shell.sh && \
-    echo 'done' >> /usr/local/bin/honeypot_shell.sh && \
-    chmod +x /usr/local/bin/honeypot_shell.sh
+# Logging setup
+RUN echo 'auth,authpriv.*    /var/log/ssh/auth.log' >> /etc/rsyslog.conf && \
+    echo '*.info;mail.none;authpriv.none;cron.none    /var/log/ssh/messages' >> /etc/rsyslog.conf
+
+# Create command logging setup with a custom bash wrapper  
+RUN echo '#!/bin/bash' > /usr/local/bin/ssh_logger.sh && \
+    echo 'LOGFILE="/var/log/ssh/commands.log"' >> /usr/local/bin/ssh_logger.sh && \
+    echo 'echo "$(date +%Y-%m-%d\ %H:%M:%S) Session started for user $USER from $SSH_CLIENT" >> $LOGFILE' >> /usr/local/bin/ssh_logger.sh && \
+    echo 'export PS1="$USER@securebank:~$ "' >> /usr/local/bin/ssh_logger.sh && \
+    echo 'while true; do' >> /usr/local/bin/ssh_logger.sh && \
+    echo '  read -e -p "$PS1" cmd' >> /usr/local/bin/ssh_logger.sh && \
+    echo '  if [[ "$cmd" == "exit" ]]; then' >> /usr/local/bin/ssh_logger.sh && \
+    echo '    echo "$(date +%Y-%m-%d\ %H:%M:%S) $USER: exit" >> $LOGFILE' >> /usr/local/bin/ssh_logger.sh && \
+    echo '    break' >> /usr/local/bin/ssh_logger.sh && \
+    echo '  fi' >> /usr/local/bin/ssh_logger.sh && \
+    echo '  if [[ -n "$cmd" ]]; then' >> /usr/local/bin/ssh_logger.sh && \
+    echo '    echo "$(date +%Y-%m-%d\ %H:%M:%S) $USER: $cmd" >> $LOGFILE' >> /usr/local/bin/ssh_logger.sh && \
+    echo '    eval "$cmd"' >> /usr/local/bin/ssh_logger.sh && \
+    echo '  fi' >> /usr/local/bin/ssh_logger.sh && \
+    echo 'done' >> /usr/local/bin/ssh_logger.sh && \
+    chmod +x /usr/local/bin/ssh_logger.sh
 
 # Configure SSH to use our custom shell
-RUN echo 'ForceCommand /usr/local/bin/honeypot_shell.sh' >> /etc/ssh/sshd_config
-
+RUN echo 'ForceCommand /usr/local/bin/ssh_logger.sh' >> /etc/ssh/sshd_config
+RUN chmod 777 /var/log/ssh/commands.log
 EXPOSE 22
 CMD rsyslogd && sleep 2 && /usr/sbin/sshd -D

@@ -3,8 +3,8 @@ import time
 import sys
 import uuid
 import os
-from app_config import log_dir, tmp_dir
-
+from os import path, getenv
+from datetime import datetime
 # config = {
 #     name="mysql_simple",
 #     port=3307,
@@ -12,6 +12,9 @@ from app_config import log_dir, tmp_dir
 #     user="testuser",
 #     user_password="testpass"
 # }
+
+log_dir = path.abspath(path.join(getenv("log_dir","../../logs"),"mysql"))
+os.makedirs(path.dirname(log_dir), exist_ok=True)
 
 def start(config):
     name = config.get("name", "mysql_simple")
@@ -23,21 +26,15 @@ def start(config):
     # Create unique container name
     container_name = f"{name}_{port}_{str(uuid.uuid4())[:8]}"
     
-    # Create log directory for MySQL
-    mysql_log_dir = os.path.join(log_dir, "mysql", container_name)
-    os.makedirs(mysql_log_dir, exist_ok=True)
-    print(f"[INFO] Created MySQL log directory at {mysql_log_dir}")
     
-    # Clean up existing container (if any)
     subprocess.run(["docker", "rm", "-f", container_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    # Start MySQL container with log mounting
     cmd = [
         "docker", "run", "-d",
         "--name", container_name,
         "-e", f"MYSQL_ROOT_PASSWORD={root_password}",
         "-p", f"{port}:3306",
-        "-v", f"{mysql_log_dir}:/var/log/mysql",
+        "-v", f"{log_dir}:/var/log/mysql",
         "mysql:latest"
     ]
 
@@ -45,11 +42,9 @@ def start(config):
         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
         print(f"✅ MySQL started on port {port} with container name '{container_name}'")
 
-        # Wait for MySQL to be ready (20 seconds)
         print("⏳ Waiting for MySQL to be ready...")
         time.sleep(20)
 
-        # Create user with remote access
         create_user_sql = f"""
         CREATE USER IF NOT EXISTS '{user}'@'%' IDENTIFIED BY '{user_password}';
         GRANT ALL PRIVILEGES ON *.* TO '{user}'@'%' WITH GRANT OPTION;
@@ -119,3 +114,4 @@ if __name__ == "__main__":
         print(f"Started with container ID: {container_id}")
     else:
         print(f"Failed to start: {error}")
+
