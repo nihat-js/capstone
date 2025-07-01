@@ -4,20 +4,17 @@ import re
 import requests
 from datetime import datetime
 from collections import defaultdict, Counter
+from os import path
 
-log_dir = os.getenv("LOG_DIR",)
-
-# Cache for resolved IP countries
+log_file = path.join(os.getenv("log_dir","../../logs"),"api","logs.txt")
 ip_country_cache = {}
 
 def get_country_from_ip(ip):
     if ip in ip_country_cache:
         return ip_country_cache[ip]
-
     country = get_country_ipapi(ip)
     if country == "Unknown":
         country = get_country_ipwhois(ip)
-
     ip_country_cache[ip] = country
     return country
 
@@ -82,12 +79,10 @@ def parse_text_log_line(line):
         }
     return None
 
-def extract_api_logs(limit=100):
-    log_file_path = os.path.abspath(os.path.join(log_dir, "api", "logs.txt"))
+def parse_api_logs(limit=100):
     logs = []
-
     try:
-        with open(log_file_path, 'r') as f:
+        with open(log_file, 'r') as f:
             lines = f.readlines()[-limit:]
             for line in reversed(lines):
                 parsed = parse_text_log_line(line.strip())
@@ -95,7 +90,6 @@ def extract_api_logs(limit=100):
                     logs.append(parsed)
     except FileNotFoundError:
         pass
-
     stats = {
         'total_requests': len(logs),
         'unique_ips': len(set(log['ip'] for log in logs)),
@@ -104,7 +98,6 @@ def extract_api_logs(limit=100):
         'threat_levels': Counter(),
         'methods': Counter()
     }
-
     for log in logs:
         stats['top_paths'][log['path']] += 1
         stats['top_ips'][log['ip']] += 1

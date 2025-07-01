@@ -5,33 +5,37 @@ from datetime import datetime
 from dotenv import load_dotenv
 import os
 import subprocess
+import sys
 
 import services.ssh.index as ssh
 import services.api as api
-import services.mysql as mysql
+import services.mysql.index as mysql
+import services.postgres.index as postgres
+import services.phpmyadmin.index as phpmyadmin
+import services.redis.index as redis
 
 import services.api.log_extractor as api_log_extractor
 import services.ssh._log_extractor as ssh_log_extractor
 
-
+services = []
 load_dotenv()
+log_dir = os.getenv("LOG_DIR")
+tmp_dir = os.getenv("TMP_DIR")
+
 app = Flask(__name__)
 CORS(app)
-services = []
-log_dir = os.getenv("LOG_DIR")
 
-DOCKER_SERVICES = {
+docker_services = {
+    "api": api.start,
+    "mysql": mysql.start,
+    "phpmyadmin": phpmyadmin.start,
+    "postgres": postgres.start,
+    "redis" : redis.start,
     "ssh" : ssh.start,
-    # "postgres": postgres.start,
-    # "mysql": service.start,
-    # "phpmyadmin": phpmyadmin.start,
-    # "redis" : redis.start,
-    # "ftp": ftp.start
 }
 
-PROCESS_SERVICES = {
-    # "api": api_service.start,
-    # "rdp" : rdp_service.start,
+process_services = {
+    "api": api.start,
 }
 
 
@@ -51,69 +55,71 @@ def list_services():
     return jsonify(services), 200
 
 
+
+def start_docker_service(name, config):
+    try:
+        container_id = docker_services[name](config)
+        return container_id, None
+    except Exception as e:
+        return None, str(e)
+
+
+def start_process_service(name, config):
+    try:
+        process_id = process_services[name](config)
+        return process_id, None
+    except Exception as e:
+        return None, str(e)
+    ervices.append({
+                "type": "docker",
+                "container_id": container_id,
+                "name": name,
+                "config": config})
+
+
 @app.route('/services/start', methods=['POST'])
 def start_service():
-    global services
     data = request.get_json(force=False)
     config = data.get('config', {})
     name, port = config.get("name"), config.get("port")
     if name is None or port is None:
         return jsonify({"error": "Name and port is required"}), 400
+    
+    name = name.strip().lower()
+    port = int(port)
 
-    if name.lower() in DOCKER_SERVICES:
-        container_id, error_message = DOCKER_SERVICES[name.lower()](config)
-        if error_message:
-            return jsonify({"error": error_message}), 500
-        else:
-            services.append({
-                "type": "docker",
-                "container_id": container_id,
-                "name": name,
-                "config": config})
-            return jsonify({"error": False, "container_id": container_id}), 200
-    elif name.lower() in PROCESS_SERVICES:
-        process_id, error_message = PROCESS_SERVICES[name.lower()](config)
-        if error_message:
-            return jsonify({"error": error_message}), 500
-        else:
-            services.append({
-                "type": "process",
-                "process_id": process_id,
-                "name": name,
-                "config": config})
-            return jsonify({"error": False, "process_id": process_id}), 200
-    else:
-        return jsonify({"error": "Service not recognized"}), 400
+    if name in docker_services:
+      result = start_docker_service(name, config)
+    elif name in PROCESS_SERVICES:
+        process_id, error_message = PROCESS_SERVICES[name](config)
+        result = start_process_service(name, config)
+
+
+
+def stop_docker_service(container_id):
+    try:
+        subprocess.run(["docker", "stop", container_id], check=True)
+        return True, None
+    except subprocess.CalledProcessError as e:
+        return False, str(e)
+    
+
+def stop_process_service(process_id):
+    try:
+        # Assuming the process service has a stop function
+        success = process_services[name].stop(process_id)
+        return success, None
+    except Exception as e:
+        return False, str(e)    
 
 
 @app.route('/services/stop', methods=['POST'])
 @with_json
 def stop_service(data):
-    global services
-
     if data.get("type") == "docker":
-        subprocess.run(["docker", "stop", data["container_id"]])
-        services = list(filter(
-            lambda x: x["container_id"] != data["container_id"],
-            services
-        ))
-        return jsonify({"error": False}), 200
+      return stop_docker_service(data.get("container_id"))
     elif data.get("type") == "process":
-        # Stop process using the process_id
-        process_id = data.get("process_id")
-        if process_id:
-            # Import the API service to use its stop function
-            success = api_service.stop(process_id)
-            if success:
-                services = list(filter(
-                    lambda x: x.get("process_id") != process_id,
-                    services
-                ))
-                return jsonify({"error": False}), 200
-            else:
-                return jsonify({"error": "Failed to stop process"}), 500
-        else:
-            return jsonify({"error": "Process ID required"}), 400
+        return stop_process_service(data.get("process_id"))
     else:
         return jsonify({"error": "Invalid service type"}), 400
 
@@ -121,11 +127,7 @@ def stop_service(data):
 @app.route('/services/<container_id>/logs', methods=['GET'])
 def get_logs(container_id):
     try:
-        result = subprocess.run(
-            ["docker", "logs", container_id],
-            capture_output=True, text=True, timeout=10
-        )
-
+        result = subprocess.run(["docker", "logs", container_id],capture_output=True, text=True, timeout=10,stderr=sys.stderr,stdout=sys.stdout)
         if result.returncode == 0:
             logs = result.stdout
             if result.stderr:

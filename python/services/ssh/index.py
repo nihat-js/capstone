@@ -2,9 +2,15 @@ import subprocess
 import uuid
 import os
 import sys
+from os import path, getenv
 
-log_dir = os.getenv("LOG_DIR")
-tmp_dir = os.getenv("TMP_DIR")
+log_dir = os.path.abspath(path.join(getenv("log_dir", "../../logs"), "ssh")).replace('\\', '/')
+tmp_dir = os.path.abspath(path.join(getenv("tmp_dir", "../../.tmp/ssh"))).replace('\\', '/')
+os.makedirs(log_dir, exist_ok=True)
+os.makedirs(tmp_dir, exist_ok=True)
+
+print(f"[INFO] Log directory: {log_dir}")
+print(f"[INFO] Temporary directory: {tmp_dir}")
 
 def start(config):
     port = config["port"]
@@ -14,91 +20,105 @@ def start(config):
     passwd_chmod = config.get("passwd_chmod", "644")
     shadow_chmod = config.get("shadow_chmod", "640")
     container_name = f"{base_name}_{port}_{str(uuid.uuid4())[:8]}"
-    image_name = "ssh_image"
+    image_name = "ssh_image" + f"_{port}_{str(uuid.uuid4())[:8]}"
 
     print(f"[INFO] Preparing to start container '{container_name}' on port {port}")
 
-    container_tmp_dir = os.path.join(tmp_dir, container_name)
-    os.makedirs(container_tmp_dir, exist_ok=True)
-    print(f"[INFO] Created temporary build directory at {container_tmp_dir}")
-
-    ssh_log_dir = os.path.join(log_dir, "ssh", container_name)
-    os.makedirs(ssh_log_dir, exist_ok=True)
-    print(f"[INFO] Created SSH log directory at {ssh_log_dir}")
-
-    # Create SSH banner file
-    banner_path = os.path.join(container_tmp_dir, "ssh_banner.txt")
+    # Create banner file
+    banner_path = os.path.join(tmp_dir, "banner.txt")
     with open(banner_path, "w") as f:
         f.write(banner + "\n")
     print(f"[INFO] SSH banner created at {banner_path}")
 
-    # Dockerfile content with SSH setup and enhanced logging
+    # Verify files exist
+    required_files = [banner_path]
+    for file_path in required_files:
+        if not os.path.exists(file_path):
+            print(f"[ERROR] Required file {file_path} does not exist.")
+            return None, f"Failed to create required file: {file_path}"
+    print(f"[INFO] Files in tmp_dir: {os.listdir(tmp_dir)}")
+
     dockerfile = f"""
-    FROM ubuntu:20.04
+FROM ubuntu:20.04
 
-    ENV DEBIAN_FRONTEND=noninteractive
-    RUN apt-get update && apt-get install -y openssh-server sudo rsyslog && \\
-        mkdir /var/run/sshd && mkdir -p /var/log/ssh && \\
-        mkdir -p /var/log/honeypot
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y openssh-server sudo rsyslog && \\
+    mkdir /var/run/sshd && mkdir -p /var/log/ssh && \\
+    mkdir -p /var/log/honeypot
 
-    # SSH Configuration for better logging and security
-    RUN echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && \\
-        echo 'LogLevel VERBOSE' >> /etc/ssh/sshd_config && \\
-        echo 'SyslogFacility AUTHPRIV' >> /etc/ssh/sshd_config && \\
-        echo 'Banner /etc/ssh/banner' >> /etc/ssh/sshd_config && \\
-        echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config && \\
-        echo 'ChallengeResponseAuthentication no' >> /etc/ssh/sshd_config && \\
-        echo 'UsePAM yes' >> /etc/ssh/sshd_config
+# Copy banner
+COPY banner.txt /etc/ssh/banner
 
-    # Copy banner file
-    COPY ssh_banner.txt /etc/ssh/banner
+# SSH Configuration
+RUN echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && \\
+    echo 'LogLevel VERBOSE' >> /etc/ssh/sshd_config && \\
+    echo 'SyslogFacility AUTHPRIV' >> /etc/ssh/sshd_config && \\
+    echo 'Banner /etc/ssh/banner' >> /etc/ssh/sshd_config && \\
+    echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config && \\
+    echo 'ChallengeResponseAuthentication no' >> /etc/ssh/sshd_config && \\
+    echo 'UsePAM yes' >> /etc/ssh/sshd_config
 
-    # Create users with specified permissions
-    {"".join([
-        f"RUN useradd -m {u['username']} && echo '{u['username']}:{u['password']}' | chpasswd && "
-        + (f"usermod -aG sudo {u['username']} && " if u.get('sudo') else "")
-        + f"mkdir -p /home/{u['username']}/.ssh && chmod 700 /home/{u['username']}/.ssh\n"
-        for u in users
-    ])}
+# Create users
+{"".join([
+    f"RUN useradd -m {u['username']} && echo '{u['username']}:{u['password']}' | chpasswd && "
+    + (f"usermod -aG sudo {u['username']} && " if u.get('sudo') else "")
+    + f"mkdir -p /home/{u['username']}/.ssh && chmod 700 /home/{u['username']}/.ssh\n"
+    for u in users
+])}
 
-    # Set file permissions as requested
-    RUN chmod {passwd_chmod} /etc/passwd && \\
-        chmod {shadow_chmod} /etc/shadow
+# Set file permissions
+RUN chmod {passwd_chmod} /etc/passwd && \\
+    chmod {shadow_chmod} /etc/shadow
 
-    # Enhanced logging setup
-    RUN echo 'auth,authpriv.*    /var/log/honeypot/auth.log' >> /etc/rsyslog.conf && \\
-        echo '*.info;mail.none;authpriv.none;cron.none    /var/log/honeypot/messages' >> /etc/rsyslog.conf && \\
-        mkdir -p /var/log/honeypot && \\
-        touch /var/log/honeypot/auth.log /var/log/honeypot/messages
+# Logging setup
+RUN echo 'auth,authpriv.*    /var/log/honeypot/auth.log' >> /etc/rsyslog.conf && \\
+    echo '*.info;mail.none;authpriv.none;cron.none    /var/log/honeypot/messages' >> /etc/rsyslog.conf && \\
+    mkdir -p /var/log/honeypot && \\
+    touch /var/log/honeypot/auth.log /var/log/honeypot/messages /var/log/honeypot/commands.log && \\
+    chmod 666 /var/log/honeypot/commands.log
 
-    # Create a script to capture user commands
-    RUN echo '#!/bin/bash' > /etc/profile.d/honeypot_logging.sh && \\
-        echo 'export PROMPT_COMMAND="history -a; logger -p local0.info \\"USER=\\$USER PWD=\\$PWD CMD=\\$(history 1 | sed \\\"s/^[ ]*[0-9]\\\\+[ ]*//\\\")\\"' >> /etc/profile.d/honeypot_logging.sh && \\
-        chmod +x /etc/profile.d/honeypot_logging.sh
+# Create command logging setup with a custom bash wrapper
+RUN echo '#!/bin/bash' > /usr/local/bin/honeypot_shell.sh && \\
+    echo 'LOGFILE="/var/log/honeypot/commands.log"' >> /usr/local/bin/honeypot_shell.sh && \\
+    echo 'echo "$(date +%Y-%m-%d\\ %H:%M:%S) Session started for user $USER from $SSH_CLIENT" >> $LOGFILE' >> /usr/local/bin/honeypot_shell.sh && \\
+    echo 'export PS1="$USER@honeypot:~$ "' >> /usr/local/bin/honeypot_shell.sh && \\
+    echo 'while true; do' >> /usr/local/bin/honeypot_shell.sh && \\
+    echo '  read -e -p "$PS1" cmd' >> /usr/local/bin/honeypot_shell.sh && \\
+    echo '  if [[ "$cmd" == "exit" ]]; then' >> /usr/local/bin/honeypot_shell.sh && \\
+    echo '    echo "$(date +%Y-%m-%d\\ %H:%M:%S) $USER: exit" >> $LOGFILE' >> /usr/local/bin/honeypot_shell.sh && \\
+    echo '    break' >> /usr/local/bin/honeypot_shell.sh && \\
+    echo '  fi' >> /usr/local/bin/honeypot_shell.sh && \\
+    echo '  if [[ -n "$cmd" ]]; then' >> /usr/local/bin/honeypot_shell.sh && \\
+    echo '    echo "$(date +%Y-%m-%d\\ %H:%M:%S) $USER: $cmd" >> $LOGFILE' >> /usr/local/bin/honeypot_shell.sh && \\
+    echo '    eval "$cmd"' >> /usr/local/bin/honeypot_shell.sh && \\
+    echo '  fi' >> /usr/local/bin/honeypot_shell.sh && \\
+    echo 'done' >> /usr/local/bin/honeypot_shell.sh && \\
+    chmod +x /usr/local/bin/honeypot_shell.sh
 
-    # Setup rsyslog to capture command logs
-    RUN echo 'local0.*    /var/log/honeypot/commands.log' >> /etc/rsyslog.conf && \\
-        touch /var/log/honeypot/commands.log
+# Configure SSH to use our custom shell
+RUN echo 'ForceCommand /usr/local/bin/honeypot_shell.sh' >> /etc/ssh/sshd_config
 
-    EXPOSE 22
+EXPOSE 22
+CMD rsyslogd && sleep 2 && /usr/sbin/sshd -D
+"""
 
-    # Start both rsyslog and SSH
-    CMD service rsyslog start && /usr/sbin/sshd -D
-    """
-
-    dockerfile_path = os.path.join(container_tmp_dir, "Dockerfile")
+    dockerfile_path = os.path.join(tmp_dir, "Dockerfile")
     with open(dockerfile_path, "w") as f:
         f.write(dockerfile.strip() + "\n")
-
     print(f"[INFO] Dockerfile written to {dockerfile_path}")
+
+    # Verify Dockerfile exists
+    if not os.path.exists(dockerfile_path):
+        print(f"[ERROR] Dockerfile {dockerfile_path} does not exist.")
+        return None, f"Failed to create Dockerfile: {dockerfile_path}"
+
     print(f"[INFO] Banner: {banner}")
     print(f"[INFO] File permissions - /etc/passwd: {passwd_chmod}, /etc/shadow: {shadow_chmod}")
     print("[INFO] Starting Docker image build...")
 
-    # Step 1: Build the Docker image
     try:
         subprocess.run(
-            ["docker", "build", "-t", image_name, container_tmp_dir],
+            ["docker", "build", "-t", image_name, tmp_dir],
             check=True,
             stdout=sys.stdout,
             stderr=sys.stderr,
@@ -109,13 +129,12 @@ def start(config):
         print("[ERROR] Docker image build failed.")
         return None, f"Build failed: {e}"
 
-    # Step 2: Run the container with enhanced log mounting
+    # Run the container
     docker_run_cmd = [
         "docker", "run", "-d",
         "--name", container_name,
         "-p", f"{port}:22",
-        "-v", f"{ssh_log_dir}:/var/log/honeypot",  # Mount honeypot logs
-        "-v", f"{ssh_log_dir}:/var/log/ssh",       # Mount ssh logs
+        "-v", f"{log_dir}:/var/log/honeypot",
         image_name
     ]
 
@@ -123,21 +142,37 @@ def start(config):
     print("       " + " ".join(docker_run_cmd))
 
     try:
-        result = subprocess.run(docker_run_cmd, check=True, text=True)
-        # Since we removed capture_output, get container ID separately
+        subprocess.run(docker_run_cmd, check=True, text=True)
         get_id_cmd = ["docker", "ps", "-q", "--filter", f"name={container_name}"]
         id_result = subprocess.run(get_id_cmd, capture_output=True, text=True)
         container_id = id_result.stdout.strip()
         print(f"[SUCCESS] Container started with ID: {container_id}")
-        print(f"[INFO] Logs will be available in: {ssh_log_dir}")
+        print(f"[INFO] Logs will be available in: {log_dir}")
         print("[INFO] Log files: auth.log (login attempts), commands.log (user commands), messages (system)")
         return container_id, None
     except subprocess.CalledProcessError as e:
         print("[ERROR] Failed to start container.")
         error_message = str(e)
-        
-        # Check for port conflict and provide cleaner error message
         if "port is already allocated" in error_message or "Bind for" in error_message:
             return None, f"Port {port} is already in use. Please choose a different port."
-        
         return None, f"Failed to start SSH: {error_message}"
+
+if __name__ == "__main__":
+    start({
+        "port": 2222,
+        "users": [
+            {"username": "james", "password": "james", "sudo": True},
+            {"username": "nihat", "password": "nihat", "sudo": False}
+        ],
+        "name": "ssh_honeypot",
+        "banner": '''
+        Welcome to SecureBank Production Server
+        =======================================
+        WARNING: This system is for authorized personnel only.
+        All activities are monitored and logged.
+        Unauthorized access is strictly prohibited.
+        Last login: Mon July 4 11:45:32 2025 from 152.49.21.29
+        ''',
+        "passwd_chmod": "644",
+        "shadow_chmod": "640"
+    })

@@ -1,12 +1,15 @@
 from flask import Flask, jsonify, request
 from datetime import datetime
+from os import path ,getenv
 import os
+import json
+import argparse
+
 app = Flask(__name__)
 
-os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
 
-
-
+log_file = path.join(getenv("log_dir","../../logs"),"api","logs.txt")
+log_file_json = path.join(getenv("log_dir","../../logs"),"api","logs.json")
 
 def log_request():
     user_agent = request.headers.get('User-Agent', 'unknown')
@@ -22,37 +25,36 @@ def log_request():
         "query_params": dict(request.args),
         "headers": dict(request.headers)
     }
-    
-    with open(LOG_FILE, 'a') as f:
+    with open(log_file, 'a') as f:
         f.write(f"{timestamp} - {ip_address} - {request.method} {request.path} - {user_agent}\n")
+    with open(log_file_json, 'a') as f:
+        f.write(json.dumps(log_entry) + "\n")    
     
-    json_log_file = LOG_FILE.replace('.txt', '_structured.json')
-    with open(json_log_file, 'a') as f:
-        import json
-        f.write(json.dumps(log_entry) + '\n')
 
 @app.before_request
 def before_request():
     if request.path == '/favicon.ico':
-        return  # Skip logging favicon requests
+        return 
     log_request()
 
 @app.route('/config', methods=['GET'])
 def config():
     return jsonify({
         "database": {
-            "host": "db.internal.local",
+            "host": "localhost",
             "port": 3306,
-            "user": "root",
-            "password": "james",
-            "name": "secret"
+            "username": args.username,
+            "password": args.password,
         },
-        # "api_key": API_KEY,
-        # "admin_email": ADMIN_EMAIL
     })
 
 
 if __name__ == '__main__':
-    print(f"Starting API service on port {9000}")
-    app.run(host='0.0.0.0', port=9000)
+    parser = argparse.ArgumentParser(description='Start the API service.')
+    parser.add_argument('--port', type=int, default=9000, help='Port to run the API service on.')
+    parser.add_argument("--username", type=str, default="james", help="Username for the API service")
+    parser.add_argument("--password", type=str, default="james", help="Password for the API service")
+    args = parser.parse_args()
+    print(f"Starting API service on port {args.port}")
+    app.run(host='0.0.0.0', port=args.port)
 
