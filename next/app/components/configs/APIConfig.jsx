@@ -57,8 +57,8 @@ export function APIConfig({ config, onChange }) {
   const [formData, setFormData] = useState({
     name: 'api',
     port: 8080,
-    api_key: 'HONEYPOT-API-KEY-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-    admin_email: 'admin@honeypot.local',
+    username: 'james',
+    password: 'james',
     ...config
   })
 
@@ -76,7 +76,7 @@ export function APIConfig({ config, onChange }) {
           type="text"
           value={formData.name}
           onChange={(e) => handleChange('name', e.target.value)}
-          placeholder="api_honeypot"
+          placeholder="api"
         />
         <HelpText>Unique identifier for this API honeypot instance</HelpText>
       </FormGroup>
@@ -95,25 +95,25 @@ export function APIConfig({ config, onChange }) {
       </FormGroup>
 
       <FormGroup>
-        <Label>API Key</Label>
+        <Label>Username</Label>
         <Input
           type="text"
-          value={formData.api_key}
-          onChange={(e) => handleChange('api_key', e.target.value)}
-          placeholder="HONEYPOT-API-KEY-123"
+          value={formData.username}
+          onChange={(e) => handleChange('username', e.target.value)}
+          placeholder="james"
         />
-        <HelpText>Fake API key that will be exposed in configuration endpoints</HelpText>
+        <HelpText>Default username that will be exposed in API responses</HelpText>
       </FormGroup>
 
       <FormGroup>
-        <Label>Admin Email</Label>
+        <Label>Password</Label>
         <Input
-          type="email"
-          value={formData.admin_email}
-          onChange={(e) => handleChange('admin_email', e.target.value)}
-          placeholder="admin@honeypot.local"
+          type="password"
+          value={formData.password}
+          onChange={(e) => handleChange('password', e.target.value)}
+          placeholder="james"
         />
-        <HelpText>Fake admin email address for the honeypot API</HelpText>
+        <HelpText>Default password that will be exposed in API responses</HelpText>
       </FormGroup>
     </ConfigForm>
   )

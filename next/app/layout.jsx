@@ -102,14 +102,14 @@ export default function RootLayout({ children }) {
 
               <SidebarSection>
                 <SidebarSectionTitle>Quick Actions</SidebarSectionTitle>
-                <QuickActionButton onClick={() => handleNavigate('/')}>
+                {/* <QuickActionButton onClick={() => handleNavigate('/')}>
                   <Plus size={16} />
                   New Honeypot
-                </QuickActionButton>
-                <QuickActionButton onClick={() => handleNavigate('/analysis')}>
+                </QuickActionButton> */}
+                {/* <QuickActionButton onClick={() => handleNavigate('/analysis')}>
                   <Activity size={16} />
                   View Analysis
-                </QuickActionButton>
+                </QuickActionButton> */}
               </SidebarSection>
 
               {/* Notifications Section */}

@@ -155,21 +155,29 @@ export function ConfigurationModal({ service, onClose, onSave }) {
     try {
       // Validate SSH users if it's an SSH service
       if (service.type === 'ssh' && config.users.length === 0) {
+        clearInterval(progressInterval)
         setNotification({
           type: 'warning',
           title: 'SSH Configuration Error',
           message: 'Please add at least one user for SSH service.'
         })
+        setIsSaving(false)
+        setSavingProgress(0)
+        setElapsedTime(0)
         return
       }
 
       // Validate FTP credentials
       if (service.type === 'ftp' && (!config.user || !config.ftpPassword)) {
+        clearInterval(progressInterval)
         setNotification({
           type: 'warning',
           title: 'FTP Configuration Error',
           message: 'Please provide both FTP username and password.'
         })
+        setIsSaving(false)
+        setSavingProgress(0)
+        setElapsedTime(0)
         return
       }
 

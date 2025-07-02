@@ -1,0 +1,8 @@
+Welcome to SecureBank Production Server
+=======================================
+
+WARNING: This system is for authorized personnel only.
+All activities are monitored and logged.
+Unauthorized access is strictly prohibited.
+
+Last login: Mon Dec 20 08:45:32 2024 from 192.168.1.100

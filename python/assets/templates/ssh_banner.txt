@@ -1,5 +1,4 @@
-# SSH Banner Template for Cowrie Honeypot
-SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.1
+
 
 Welcome to SecureBank Production Server
 =======================================

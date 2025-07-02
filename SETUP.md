@@ -31,7 +31,7 @@ Updated to match your Flask API endpoints:
 
 ### 1. Start Your Flask API
 ```bash
-cd python2
+cd python
 python app.py
 ```
 Your API should be running on `http://localhost:5000`

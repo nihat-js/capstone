@@ -9,7 +9,6 @@ from os import path
 # Use absolute path to ensure we find the log file
 log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../logs"))
 log_file = path.join(log_dir, "api", "logs.txt")
-print(f"[DEBUG] Looking for API logs at: {log_file}")
 
 ip_country_cache = {}
 
@@ -123,9 +122,6 @@ def parse_logs():
         logs = result.get('logs', [])
         stats = result.get('statistics', {})
         
-        print(f"[DEBUG] Found {len(logs)} API logs")
-        
-        # Enhanced analytics
         hourly_activity = [0] * 24
         daily_activity = {}
         path_analysis = Counter()

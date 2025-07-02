@@ -9,8 +9,7 @@ tmp_dir = os.path.abspath(path.join(getenv("tmp_dir", "../../.tmp/ssh"))).replac
 os.makedirs(log_dir, exist_ok=True)
 os.makedirs(tmp_dir, exist_ok=True)
 
-print(f"[INFO] Log directory: {log_dir}")
-print(f"[INFO] Temporary directory: {tmp_dir}")
+
 
 def start(config):
     port = config["port"]
