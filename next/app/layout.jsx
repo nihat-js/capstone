@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import styled from 'styled-components'
-import { Shield, Menu, X, FileText, BarChart3, Settings, Home, Plus, Server, Bell, BellRing, Activity } from 'lucide-react'
+import { Shield, Menu, X, FileText, BarChart3, Settings, Home, Plus, Server, Bell, BellRing, Activity, Database, Terminal, Code, Wifi } from 'lucide-react'
 import { useRouter, usePathname } from 'next/navigation'
 import StyledComponentsRegistry from '@/lib/registry'
 import './globals.css'
@@ -21,9 +21,20 @@ export default function RootLayout({ children }) {
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Home, current: pathname === '/' },
     { name: 'Notifications', href: '/notifications', icon: Bell, current: pathname === '/notifications' },
-    { name: 'Logs', href: '/logs', icon: FileText, current: pathname === '/logs' },
     { name: 'Analysis', href: '/analysis', icon: BarChart3, current: pathname === '/analysis' },
     { name: 'Settings', href: '/settings', icon: Settings, current: pathname === '/settings' },
+  ]
+
+  const [logStatus, setLogStatus] = useState({
+    api: 'active',
+    ssh: 'warning', 
+    mysql: 'active'
+  })
+
+  const logNavigation = [
+    { name: 'API Logs', href: '/logs/api', icon: Code, current: pathname === '/logs/api', status: logStatus.api },
+    { name: 'SSH Logs', href: '/logs/ssh', icon: Terminal, current: pathname === '/logs/ssh', status: logStatus.ssh },
+    { name: 'MySQL Logs', href: '/logs/mysql', icon: Database, current: pathname === '/logs/mysql', status: logStatus.mysql },
   ]
 
   const handleNavigate = (href) => {
@@ -68,6 +79,27 @@ export default function RootLayout({ children }) {
                 })}
               </SidebarNav>
 
+              {/* Logs Section */}
+              <SidebarSection>
+                <SidebarSectionTitle>Security Logs</SidebarSectionTitle>
+                <LogNav>
+                  {logNavigation.map((item) => {
+                    const IconComponent = item.icon
+                    return (
+                      <LogNavItem
+                        key={item.name}
+                        $active={item.current}
+                        onClick={() => handleNavigate(item.href)}
+                      >
+                        <IconComponent size={16} />
+                        {item.name}
+                        <LogStatusBadge $status={item.status} />
+                      </LogNavItem>
+                    )
+                  })}
+                </LogNav>
+              </SidebarSection>
+
               <SidebarSection>
                 <SidebarSectionTitle>Quick Actions</SidebarSectionTitle>
                 <QuickActionButton onClick={() => handleNavigate('/')}>
@@ -100,7 +132,7 @@ export default function RootLayout({ children }) {
                         <NotificationTime>{notification.time}</NotificationTime>
                       </NotificationItem>
                     ))
-                  )}
+                  }
                   {notifications.length > 0 && (
                     <ClearNotificationsButton onClick={clearNotifications}>
                       Clear All
@@ -433,4 +465,51 @@ const ClearNotificationsButton = styled.button`
     background: #f9fafb;
     color: #374151;
   }
+`;
+
+const LogNav = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+`;
+
+const LogNavItem = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: ${({ $active }) => $active ? '#eff6ff' : 'transparent'};
+  color: ${({ $active }) => $active ? '#2563eb' : '#6b7280'};
+  font-weight: ${({ $active }) => $active ? '600' : '500'};
+  font-size: 0.875rem;
+  text-align: left;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #f3f4f6;
+    color: #374151;
+  }
+
+  svg {
+    color: ${({ $active }) => $active ? '#2563eb' : '#9ca3af'};
+  }
+`;
+
+const LogStatusBadge = styled.div`
+  margin-left: auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: ${({ $status }) => {
+    switch ($status) {
+      case 'active': return '#10b981';
+      case 'warning': return '#f59e0b';
+      case 'error': return '#ef4444';
+      default: return '#6b7280';
+    }
+  }};
+  box-shadow: 0 0 0 2px white;
 `;

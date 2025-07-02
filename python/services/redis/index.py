@@ -2,7 +2,6 @@ import subprocess
 import uuid
 import sys
 import os
-from app_config import log_dir, tmp_dir
 
 def start(config):
     port, name = config["port"], config.get("name", "redis")

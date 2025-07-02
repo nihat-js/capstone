@@ -111,3 +111,58 @@ def parse_api_logs(limit=100):
         'logs': logs,
         'statistics': stats
     }
+
+def parse_logs():
+    """Main function to parse API logs and return dashboard data"""
+    try:
+        result = parse_api_logs(200)  # Get last 200 logs
+        logs = result.get('logs', [])
+        stats = result.get('statistics', {})
+        
+        # Transform stats to match dashboard format
+        dashboard_stats = {
+            'total_requests': stats.get('total_requests', 0),
+            'unique_ips': stats.get('unique_ips', 0),
+            'suspicious_activities': stats.get('threat_levels', {}).get('HIGH', 0) + stats.get('threat_levels', {}).get('MEDIUM', 0),
+            'failed_requests': 0,  # Would need to parse status codes from logs
+            'top_attacking_ips': [{'ip': ip, 'count': count} for ip, count in stats.get('top_ips', {}).items()],
+            'attack_timeline': [],  # Could be enhanced to show hourly data
+            'threat_summary': {
+                'high': stats.get('threat_levels', {}).get('HIGH', 0),
+                'medium': stats.get('threat_levels', {}).get('MEDIUM', 0),
+                'low': stats.get('threat_levels', {}).get('LOW', 0)
+            },
+            'recent_attacks': [{
+                'timestamp': log.get('timestamp'),
+                'type': f"{log.get('method')} {log.get('path')}",
+                'details': f"IP: {log.get('ip')} - {log.get('user_agent', '')[:50]}...",
+                'severity': log.get('threat_level', 'low').lower()
+            } for log in logs if log.get('threat_level') in ['HIGH', 'MEDIUM']][:10]
+        }
+        
+        return {
+            'stats': dashboard_stats,
+            'logs': logs,
+            'total_logs': len(logs),
+            'service': 'api',
+            'last_updated': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        return {
+            'stats': {
+                'total_requests': 0,
+                'unique_ips': 0,
+                'suspicious_activities': 0,
+                'failed_requests': 0,
+                'top_attacking_ips': [],
+                'attack_timeline': [],
+                'threat_summary': {'high': 0, 'medium': 0, 'low': 0},
+                'recent_attacks': []
+            },
+            'logs': [],
+            'total_logs': 0,
+            'service': 'api',
+            'error': str(e),
+            'last_updated': datetime.now().isoformat()
+        }

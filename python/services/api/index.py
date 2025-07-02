@@ -4,12 +4,15 @@ from os import path ,getenv
 import os
 import json
 import argparse
-
+import subprocess
 app = Flask(__name__)
 
 
 log_file = path.join(getenv("log_dir","../../logs"),"api","logs.txt")
 log_file_json = path.join(getenv("log_dir","../../logs"),"api","logs.json")
+
+def start():
+    subprocess.run(["mkdir", "-p", path.dirname(log_file_json)], check=True)
 
 def log_request():
     user_agent = request.headers.get('User-Agent', 'unknown')

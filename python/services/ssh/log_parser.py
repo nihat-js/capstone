@@ -2,6 +2,7 @@ import re
 import os
 import requests
 import time
+import json
 from collections import defaultdict, Counter
 from datetime import datetime, timedelta
 
@@ -314,7 +315,23 @@ def parse_ssh_honeypot_logs():
     
     if not auth_log_exists and not commands_log_exists:
         print(f"[ERROR] ❌ No log files found! Cannot perform analysis.")
-        return
+        return {
+            'stats': {
+                'total_connections': 0,
+                'failed_logins': 0,
+                'successful_logins': 0,
+                'unique_ips': 0,
+                'commands_executed': 0,
+                'top_attacking_ips': [],
+                'attack_timeline': [],
+                'threat_summary': {'high': 0, 'medium': 0, 'low': 0},
+                'recent_attacks': []
+            },
+            'logs': [],
+            'total_logs': 0,
+            'service': 'ssh',
+            'last_updated': datetime.now().isoformat()
+        }
     
     # Always analyze commands first
     print(f"[INFO] 📊 Analyzing command logs...")
@@ -430,101 +447,25 @@ def parse_ssh_honeypot_logs():
             if not ip.startswith('unknown_'):  # Skip synthetic IPs
                 location = get_ip_location(ip)
                 ip_data[ip]['location'] = location
-                time.sleep(0.5)  # Reduced delay
+                time.sleep(0.5)  # Red  uced delay
 
     # Generate comprehensive dashboard-ready report
-    generate_dashboard_report(ip_data, command_stats, attack_patterns)
+    return generate_dashboard_report(ip_data, command_stats, attack_patterns)
 
 def generate_dashboard_report(ip_data, command_stats, attack_patterns):
-    """Generate a comprehensive, dashboard-ready security report."""
-
-    print(f"\n{'='*80}")
-    print(f"🛡️  SSH HONEYPOT CYBER SECURITY DASHBOARD")
-    print(f"{'='*80}")
-    print(f"📊 Analysis Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"📁 Data Sources: Auth Log {'✅' if os.path.exists(AUTH_LOG_FILE) else '❌'} | Commands Log {'✅' if os.path.exists(COMMANDS_LOG_FILE) else '❌'}")
-    print(f"{'='*80}")
-
-    # Critical metrics overview
+    """Generate a comprehensive, dashboard-ready security report with rich data."""
+    
+    # Calculate metrics
     total_ips = len(ip_data) if ip_data else 0
     total_failed_attempts = sum(info['failed_attempts'] for info in ip_data.values()) if ip_data else 0
     total_successful_logins = sum(info['successful_logins'] for info in ip_data.values()) if ip_data else 0
     total_connections = sum(info['connections_opened'] for info in ip_data.values()) if ip_data else 0
     total_commands = command_stats.get('total_commands', 0) if command_stats else 0
     active_users = len(command_stats.get('users', {})) if command_stats else 0
-
-    print(f"\n� CRITICAL SECURITY METRICS")
-    print(f"{'─'*50}")
-    print(f"🌐 Unique Attack Sources: {total_ips}")
-    print(f"🔐 Login Attempts: {total_failed_attempts + total_successful_logins}")
-    print(f"❌ Failed Authentications: {total_failed_attempts}")
-    print(f"⚠️  Successful Breaches: {total_successful_logins}")
-    print(f"🔗 Network Connections: {total_connections}")
-    print(f"💻 Commands Executed: {total_commands}")
-    print(f"👤 Compromised Users: {active_users}")
-
-    # Attack pattern analysis
-    if attack_patterns['attack_waves']:
-        print(f"\n⚡ ATTACK WAVE ANALYSIS")
-        print(f"{'─'*50}")
-        print(f"🌊 Attack Waves Detected: {len(attack_patterns['attack_waves'])}")
-        for i, wave in enumerate(attack_patterns['attack_waves'][:3], 1):
-            print(f"   Wave {i}: {wave['duration']:.0f}s duration, Users: {', '.join(wave['users'])}")
-
-    # Peak attack hours
-    if attack_patterns['peak_hours']:
-        print(f"\n🕐 ATTACK TIMING ANALYSIS")
-        print(f"{'─'*50}")
-        peak_hour = attack_patterns['peak_hours'].most_common(1)[0]
-        print(f"🎯 Peak Attack Hour: {peak_hour[0]:02d}:00 ({peak_hour[1]} sessions)")
-        print(f"📈 Hourly Distribution:")
-        for hour, count in sorted(attack_patterns['peak_hours'].items()):
-            bar = '█' * min(count, 20)
-            print(f"   {hour:02d}:00 │{bar:<20}│ {count}")
-
-    # Threat level analysis
-    if command_stats and command_stats.get('threat_summary'):
-        print(f"\n🚨 THREAT LEVEL BREAKDOWN")
-        print(f"{'─'*50}")
-        threat_summary = command_stats['threat_summary']
-        critical_commands = threat_summary.get('HIGH', 0)
-        medium_threats = threat_summary.get('MEDIUM', 0)
-        
-        total_threat_commands = critical_commands + medium_threats
-        if total_commands > 0:
-            threat_percentage = (total_threat_commands / total_commands) * 100
-            print(f"⚠️  Threat Command Ratio: {threat_percentage:.1f}%")
-        
-        for level, emoji in [('HIGH', '🔴'), ('MEDIUM', '🟡'), ('LOW', '🔵'), ('INFO', '🟢')]:
-            count = threat_summary.get(level, 0)
-            if total_commands > 0:
-                percentage = (count / total_commands) * 100
-                print(f"{emoji} {level}: {count} commands ({percentage:.1f}%)")
-
-    # Most dangerous commands
-    if command_stats and command_stats.get('commands_by_type'):
-        print(f"\n� TOP MALICIOUS COMMANDS")
-        print(f"{'─'*50}")
-        dangerous_commands = ['sudo', 'su', 'wget', 'curl', 'rm', 'chmod', 'nc', 'netcat']
-        top_malicious = []
-        
-        for cmd, count in command_stats['commands_by_type'].most_common():
-            if any(dangerous in cmd.lower() for dangerous in dangerous_commands):
-                top_malicious.append((cmd, count))
-                if len(top_malicious) >= 5:
-                    break
-        
-        if top_malicious:
-            for i, (cmd, count) in enumerate(top_malicious, 1):
-                print(f"   {i}. {cmd}: {count} executions")
-        else:
-            print("   No high-risk commands detected")
-
-    # IP threat ranking
+    
+    # Calculate threat scores for top attacking IPs
+    top_attacking_ips = []
     if ip_data:
-        print(f"\n🎯 TOP THREAT SOURCES")
-        print(f"{'='*60}")
-        
         threat_scores = []
         for ip, info in ip_data.items():
             user_commands = None
@@ -534,69 +475,264 @@ def generate_dashboard_report(ip_data, command_stats, attack_patterns):
             
             threat_score = calculate_threat_score(info, user_commands)
             threat_level = get_threat_level_from_score(threat_score)
-            threat_scores.append((ip, threat_score, threat_level, info))
-        
-        threat_scores.sort(key=lambda x: x[1], reverse=True)
-        
-        for i, (ip, score, level, info) in enumerate(threat_scores[:5], 1):
-            users = ', '.join(f"{u}({c})" for u, c in info['users'].most_common(2)) or 'N/A'
+            
             location = "Unknown"
             if info.get('location'):
                 loc = info['location']
                 location = f"{loc.get('country', 'Unknown')}"
             
-            print(f"\n🥇 Rank #{i}: {ip}")
-            print(f"   🚨 Threat Level: {level} (Score: {score}/100)")
-            print(f"   🌍 Location: {location}")
-            print(f"   👤 Users: {users}")
-            print(f"   📊 Attempts: {info['failed_attempts']}❌ / {info['successful_logins']}✅")
-            
-            # Show session timeline
-            if info['first_seen'] and info['last_seen']:
-                duration = (info['last_seen'] - info['first_seen']).total_seconds()
-                print(f"   ⏰ Attack Duration: {duration:.0f}s ({info['first_seen'].strftime('%H:%M')} - {info['last_seen'].strftime('%H:%M')})")
-
-    # User behavior analysis
-    if command_stats and command_stats.get('users'):
-        print(f"\n👥 COMPROMISED USER ANALYSIS")
-        print(f"{'='*60}")
+            threat_scores.append({
+                'ip': ip,
+                'threat_score': threat_score,
+                'threat_level': threat_level,
+                'failed_attempts': info['failed_attempts'],
+                'successful_logins': info['successful_logins'],
+                'connections': info['connections_opened'],
+                'location': location,
+                'first_seen': info['first_seen'].isoformat() if info['first_seen'] else None,
+                'last_seen': info['last_seen'].isoformat() if info['last_seen'] else None,
+                'users': dict(info['users'].most_common()),
+                'total_events': info['count']
+            })
         
-        for user, behavior in attack_patterns.get('user_behavior', {}).items():
-            if behavior['total_commands'] > 0:
-                print(f"\n👤 User: {user}")
-                print(f"   💻 Commands Executed: {behavior['total_commands']}")
-                print(f"   🔍 Reconnaissance: {behavior['reconnaissance_commands']} commands")
-                print(f"   ⚠️  Escalation Attempts: {behavior['escalation_attempts']}")
-                print(f"   📊 Attack Pattern Score: {behavior['attack_pattern_score']}/10")
+        threat_scores.sort(key=lambda x: x['threat_score'], reverse=True)
+        top_attacking_ips = threat_scores[:10]
+    
+    # Generate detailed logs list for frontend
+    logs = []
+    
+    # Add authentication events from ip_data
+    if ip_data:
+        for ip, info in ip_data.items():
+            if info['failed_attempts'] > 0:
+                logs.append({
+                    'timestamp': info['last_seen'].isoformat() if info['last_seen'] else datetime.now().isoformat(),
+                    'event_type': 'failed_login',
+                    'ip': ip,
+                    'message': f"{info['failed_attempts']} failed authentication attempts",
+                    'threat_level': 'high' if info['failed_attempts'] > 5 else 'medium',
+                    'country': info.get('location', {}).get('country', 'Unknown') if info.get('location') else 'Unknown',
+                    'details': f"Multiple failed login attempts from {ip}"
+                })
+            
+            if info['successful_logins'] > 0:
+                users_list = ', '.join([f"{user}({count})" for user, count in info['users'].most_common(3)])
+                logs.append({
+                    'timestamp': info['last_seen'].isoformat() if info['last_seen'] else datetime.now().isoformat(),
+                    'event_type': 'login',
+                    'ip': ip,
+                    'message': f"Successful authentication for users: {users_list}",
+                    'threat_level': 'high',
+                    'country': info.get('location', {}).get('country', 'Unknown') if info.get('location') else 'Unknown',
+                    'details': f"Successful login from {ip}"
+                })
+    
+    # Add detailed command execution events
+    if command_stats and command_stats.get('users'):
+        for user, user_info in command_stats['users'].items():
+            if user_info and user_info.get('commands'):
+                for cmd_info in user_info['commands'][-20:]:  # Last 20 commands
+                    threat_level = cmd_info['threat_level'].lower()
+                    logs.append({
+                        'timestamp': cmd_info['timestamp'].isoformat(),
+                        'event_type': 'command',
+                        'username': user,
+                        'command': cmd_info['command'],
+                        'message': f"Command executed: {cmd_info['command'][:50]}...",
+                        'threat_level': threat_level,
+                        'details': f"User {user} executed: {cmd_info['command']}"
+                    })
+    
+    # Sort logs by timestamp (newest first)
+    logs.sort(key=lambda x: x['timestamp'], reverse=True)
+    
+    # Calculate threat summary with more detail
+    threat_summary = {'high': 0, 'medium': 0, 'low': 0}
+    if command_stats and command_stats.get('threat_summary'):
+        threat_summary = {
+            'high': command_stats['threat_summary'].get('HIGH', 0),
+            'medium': command_stats['threat_summary'].get('MEDIUM', 0),
+            'low': command_stats['threat_summary'].get('LOW', 0) + command_stats['threat_summary'].get('INFO', 0)
+        }
+    
+    # Enhanced recent attacks (last 15 high/medium threat events)
+    recent_attacks = [
+        {
+            'timestamp': log['timestamp'],
+            'type': log['event_type'].replace('_', ' ').title(),
+            'details': log.get('details', log.get('message', '')),
+            'severity': log.get('threat_level', 'low'),
+            'source': log.get('ip', log.get('username', 'Unknown'))
+        }
+        for log in logs 
+        if log.get('threat_level') in ['high', 'medium']
+    ][:15]
+    
+    # Generate command statistics and charts data
+    command_frequency = {}
+    user_activity = {}
+    hourly_activity = [0] * 24
+    daily_activity = {}
+    
+    if command_stats and command_stats.get('users'):
+        for user, user_info in command_stats['users'].items():
+            if user_info and user_info.get('commands'):
+                user_activity[user] = {
+                    'total_commands': len(user_info['commands']),
+                    'sessions': user_info.get('sessions', 0),
+                    'first_activity': user_info.get('first_activity').isoformat() if user_info.get('first_activity') else None,
+                    'last_activity': user_info.get('last_activity').isoformat() if user_info.get('last_activity') else None,
+                    'threat_levels': dict(user_info.get('threat_levels', {})),
+                    'top_commands': [cmd_info['command'] for cmd_info in user_info['commands'][-10:]]
+                }
                 
-                if behavior['attack_pattern_score'] >= 5:
-                    print(f"   🚨 HIGH RISK: Sophisticated attack pattern detected!")
+                # Count command frequency
+                for cmd_info in user_info['commands']:
+                    cmd_base = cmd_info['command'].split()[0] if cmd_info['command'].split() else 'unknown'
+                    command_frequency[cmd_base] = command_frequency.get(cmd_base, 0) + 1
+                    
+                    # Activity by hour
+                    if cmd_info.get('timestamp'):
+                        hour = cmd_info['timestamp'].hour
+                        hourly_activity[hour] += 1
+                        
+                        # Activity by day
+                        day = cmd_info['timestamp'].date().isoformat()
+                        daily_activity[day] = daily_activity.get(day, 0) + 1
+    
+    # Top commands used
+    top_commands = sorted(command_frequency.items(), key=lambda x: x[1], reverse=True)[:15]
+    
+    # Attack timeline (hourly breakdown)
+    attack_timeline = [
+        {'hour': i, 'attacks': hourly_activity[i]} 
+        for i in range(24)
+    ]
+    
+    # Connection patterns
+    connection_patterns = []
+    if ip_data:
+        for ip, info in ip_data.items():
+            if info['connections_opened'] > 0:
+                connection_patterns.append({
+                    'ip': ip,
+                    'connections': info['connections_opened'],
+                    'duration': (info['last_seen'] - info['first_seen']).total_seconds() if info['first_seen'] and info['last_seen'] else 0,
+                    'success_rate': (info['successful_logins'] / max(info['connections_opened'], 1)) * 100,
+                    'country': info.get('location', {}).get('country', 'Unknown') if info.get('location') else 'Unknown'
+                })
+    
+    return {
+        'stats': {
+            'total_connections': total_connections,
+            'failed_logins': total_failed_attempts,
+            'successful_logins': total_successful_logins,
+            'unique_ips': total_ips,
+            'commands_executed': total_commands,
+            'active_users': active_users,
+            'top_attacking_ips': top_attacking_ips,
+            'attack_timeline': attack_timeline,
+            'threat_summary': threat_summary,
+            'recent_attacks': recent_attacks,
+            'command_frequency': dict(top_commands),
+            'user_activity': user_activity,
+            'connection_patterns': connection_patterns[:10],
+            'daily_activity': daily_activity,
+            'security_metrics': {
+                'avg_commands_per_session': total_commands / max(total_successful_logins, 1),
+                'most_active_hour': max(range(24), key=lambda h: hourly_activity[h]),
+                'attack_success_rate': (total_successful_logins / max(total_connections, 1)) * 100,
+                'top_threat_commands': [cmd for cmd, count in top_commands if count > 2][:10]
+            }
+        },
+        'logs': logs[:100],  # Return last 100 logs
+        'raw_data': {
+            'all_commands': [
+                {
+                    'user': user,
+                    'command': cmd_info['command'],
+                    'timestamp': cmd_info['timestamp'].isoformat(),
+                    'threat_level': cmd_info['threat_level']
+                }
+                for user, user_info in (command_stats.get('users', {}) or {}).items()
+                for cmd_info in (user_info.get('commands', []) or [])
+            ][-50:],  # Last 50 commands
+            'session_timeline': [
+                {
+                    'user': session['user'],
+                    'timestamp': session['timestamp'].isoformat(),
+                    'type': session['type']
+                }
+                for session in (command_stats.get('session_timeline', []) or [])
+            ],
+            'ip_details': [
+                {
+                    'ip': ip,
+                    'country': info.get('location', {}).get('country', 'Unknown') if info.get('location') else 'Unknown',
+                    'city': info.get('location', {}).get('city', 'Unknown') if info.get('location') else 'Unknown',
+                    'isp': info.get('location', {}).get('isp', 'Unknown') if info.get('location') else 'Unknown',
+                    'first_seen': info['first_seen'].isoformat() if info['first_seen'] else None,
+                    'last_seen': info['last_seen'].isoformat() if info['last_seen'] else None,
+                    'total_events': info['count'],
+                    'users': dict(info['users'].most_common())
+                }
+                for ip, info in (ip_data or {}).items()
+            ]
+        },
+        'charts_data': {
+            'hourly_activity': [
+                {'hour': f"{i:02d}:00", 'attacks': hourly_activity[i]} 
+                for i in range(24)
+            ],
+            'command_distribution': [
+                {'command': cmd, 'count': count, 'percentage': (count/total_commands*100) if total_commands > 0 else 0}
+                for cmd, count in top_commands[:10]
+            ],
+            'threat_level_distribution': [
+                {'level': level.title(), 'count': count}
+                for level, count in threat_summary.items()
+            ],
+            'user_command_breakdown': [
+                {
+                    'user': user, 
+                    'commands': len(info.get('commands', [])),
+                    'sessions': info.get('sessions', 0),
+                    'high_threat': info.get('threat_levels', {}).get('HIGH', 0),
+                    'medium_threat': info.get('threat_levels', {}).get('MEDIUM', 0)
+                }
+                for user, info in (command_stats.get('users', {}) or {}).items()
+            ]
+        },
+        'total_logs': len(logs),
+        'service': 'ssh',
+        'last_updated': datetime.now().isoformat()
+    }
 
-    # Security recommendations
-    print(f"\n🛡️  SECURITY RECOMMENDATIONS")
-    print(f"{'='*60}")
-    
-    if total_successful_logins > 0:
-        print("🔴 CRITICAL: Successful breaches detected!")
-        print("   → Change all compromised passwords immediately")
-        print("   → Review system for unauthorized changes")
-    
-    if total_failed_attempts > 50:
-        print("🟡 HIGH: Brute force attacks detected")
-        print("   → Implement fail2ban or IP blocking")
-        print("   → Consider rate limiting SSH connections")
-    
-    if critical_commands > 0:
-        print("� MEDIUM: Privileged commands executed")
-        print("   → Audit system privileges and permissions")
-        print("   → Monitor for privilege escalation attempts")
-    
-    print(f"✅ Monitor honeypot logs regularly for new threats")
-    print(f"✅ Update threat signatures and detection rules")
-
-    print(f"\n{'='*80}")
-    print(f"🔚 END OF CYBER SECURITY ANALYSIS")
-    print(f"{'='*80}")
+def parse_logs():
+    """Main function to parse SSH logs and return dashboard data"""
+    try:
+        result = parse_ssh_honeypot_logs()
+        return result
+    except Exception as e:
+        return {
+            'stats': {
+                'total_connections': 0,
+                'failed_logins': 0,
+                'successful_logins': 0,
+                'unique_ips': 0,
+                'commands_executed': 0,
+                'top_attacking_ips': [],
+                'attack_timeline': [],
+                'threat_summary': {'high': 0, 'medium': 0, 'low': 0},
+                'recent_attacks': []
+            },
+            'logs': [],
+            'total_logs': 0,
+            'service': 'ssh',
+            'error': str(e),
+            'last_updated': datetime.now().isoformat()
+        }
 
 if __name__ == "__main__":
-    parse_ssh_honeypot_logs()
+    result = parse_logs()
+    print(json.dumps(result, indent=2, default=str))

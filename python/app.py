@@ -8,14 +8,16 @@ import subprocess
 import sys
 
 import services.ssh.index as ssh
-import services.api as api
+import services.api.index as api
 import services.mysql.index as mysql
 import services.postgres.index as postgres
 import services.phpmyadmin.index as phpmyadmin
 import services.redis.index as redis
 
-import services.api.log_extractor as api_log_extractor
-import services.ssh._log_extractor as ssh_log_extractor
+# Import log parsers for each service
+import services.ssh.log_parser as ssh_log_parser
+import services.mysql.log_parser as mysql_log_parser
+import services.api.log_parser as api_log_parser
 
 services = []
 load_dotenv()
@@ -89,10 +91,19 @@ def start_service():
     port = int(port)
 
     if name in docker_services:
-      result = start_docker_service(name, config)
-    elif name in PROCESS_SERVICES:
-        process_id, error_message = PROCESS_SERVICES[name](config)
-        result = start_process_service(name, config)
+        container_id, error_message = start_docker_service(name, config)
+        if container_id:
+            services.append({
+                "type": "docker",
+                "container_id": container_id,
+                "name": name,
+                "config": config
+            })
+            return jsonify({"success": True, "container_id": container_id}), 200
+        else:
+            return jsonify({"error": error_message}), 500
+    else:
+        return jsonify({"error": "Unknown service"}), 400
 
 
 
@@ -106,9 +117,8 @@ def stop_docker_service(container_id):
 
 def stop_process_service(process_id):
     try:
-        # Assuming the process service has a stop function
-        success = process_services[name].stop(process_id)
-        return success, None
+        # For now, just return success since we don't have process services implemented
+        return True, None
     except Exception as e:
         return False, str(e)    
 
@@ -158,23 +168,113 @@ def get_logs(container_id):
 
 
 
+# Log endpoints for frontend
+@app.route('/logs/api', methods=['GET'])
+def get_api_logs():
+    try:
+        result = api_log_parser.parse_logs()
+        return jsonify({
+            "success": True,
+            "logs": result.get('logs', []),
+            "stats": result.get('stats', {}),
+            "service": "api"
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "logs": [],
+            "stats": {},
+            "service": "api"
+        }), 500
+
+
+@app.route('/logs/ssh', methods=['GET'])
+def get_ssh_logs():
+    try:
+        result = ssh_log_parser.parse_logs()
+        return jsonify({
+            "success": True,
+            "logs": result.get('logs', []),
+            "stats": result.get('stats', {}),
+            "service": "ssh"
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "logs": [],
+            "stats": {},
+            "service": "ssh"
+        }), 500
+
+
+@app.route('/logs/mysql', methods=['GET'])
+def get_mysql_logs():
+    try:
+        result = mysql_log_parser.parse_logs()
+        return jsonify({
+            "success": True,
+            "logs": result.get('logs', []),
+            "stats": result.get('stats', {}),
+            "service": "mysql"
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "logs": [],
+            "stats": {},
+            "service": "mysql"
+        }), 500
+
+
 @app.route('/services/<type>/reallogs', methods=['GET'])
 def get_real_logs(type):
     if type == "api":
-        print("bura geldi")
-        data = api_log_extractor.extract_api_logs()
-        return jsonify({
-            "error": False,
-            "message": "API logs extracted successfully",
-            "data": data
-        }), 200
+        try:
+            logs = api_log_parser.parse_logs()
+            return jsonify({
+                "error": False,
+                "message": "API logs extracted successfully",
+                "data": logs
+            }), 200
+        except Exception as e:
+            return jsonify({
+                "error": True,
+                "message": str(e)
+            }), 500
     elif type == "ssh":
-        # Assuming ssh service has a log extractor
-        ssh_log_extractor.extract_ssh_logs()
+        try:
+            logs = ssh_log_parser.parse_logs()
+            return jsonify({
+                "error": False,
+                "message": "SSH logs extracted successfully",
+                "data": logs
+            }), 200
+        except Exception as e:
+            return jsonify({
+                "error": True,
+                "message": str(e)
+            }), 500
+    elif type == "mysql":
+        try:
+            logs = mysql_log_parser.parse_logs()
+            return jsonify({
+                "error": False,
+                "message": "MySQL logs extracted successfully", 
+                "data": logs
+            }), 200
+        except Exception as e:
+            return jsonify({
+                "error": True,
+                "message": str(e)
+            }), 500
+    else:
         return jsonify({
-            "error": False,
-            "message": "SSH logs extracted successfully"
-        }), 200
+            "error": True,
+            "message": "Unknown service type"
+        }), 400
 
 
 if __name__ == '__main__':

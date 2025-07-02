@@ -4,7 +4,6 @@ import os
 import sys
 import json
 import sys
-from app_config import log_dir, tmp_dir
 
 
 def start(config):
