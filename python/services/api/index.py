@@ -1,157 +1,137 @@
-# -*- coding: utf-8 -*-
-from flask import Flask, jsonify, request
-from datetime import datetime
-from os import path, getenv
+#!/usr/bin/env python3
+import uvicorn
 import os
 import json
 import argparse
 import subprocess
 import sys
-import psutil
+from datetime import datetime
+from fastapi import FastAPI, Request
+from os import path, getenv
 
+app = FastAPI(title="API Honeypot Service", version="1.0.0")
 
-app = Flask(__name__)
+# Global variables for configuration
+port_config = 8080
+username_config = "james"
+password_config = "james"
 
-
+# Setup logging
 log_file = path.join(getenv("log_dir", "../../logs"), "api", "logs.txt")
 log_file_json = path.join(getenv("log_dir", "../../logs"), "api", "logs.json")
 os.makedirs(path.dirname(log_file_json), exist_ok=True)
 os.makedirs(path.dirname(log_file), exist_ok=True)
 
-
-def start(config=None):
-    """Start the API honeypot service with given configuration"""
-    if not config:
-        return None, "No configuration provided"
-
-    port = config.get('port', 8080)
-    username = config.get('username', 'james')
-    password = config.get('password', 'james')
-    
-    # Handle empty password from config
-    if not password or password.strip() == '':
-        password = 'james'
-
-    try:
-        # Check if port is available first
-        import socket
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            sock.bind(('localhost', port))
-            sock.close()
-        except OSError:
-            return None, f"Port {port} is already in use"
-
-        # Use a simpler approach that works reliably on Windows
-        cmd = [
-            'python', __file__,
-            '--port', str(port),
-            '--username', username,
-            '--password', password
-        ]
-        
-        # Start as background process
-        if os.name == 'nt':  # Windows
-            # Use CREATE_NEW_PROCESS_GROUP to properly detach on Windows
-            process = subprocess.Popen(
-                cmd,
-                cwd=os.path.dirname(__file__),
-                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
-            )
-        else:
-            # Linux/Unix approach
-            process = subprocess.Popen(
-                cmd,
-                cwd=os.path.dirname(__file__),
-                preexec_fn=os.setsid if hasattr(os, 'setsid') else None,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
-            )
-        
-        # Give it a moment to start
-        import time
-        time.sleep(3)
-        
-        # Check if still running
-        if process.poll() is None:
-            # Verify the process is still running using psutil
-            import psutil
-            if psutil.pid_exists(process.pid):
-                return process.pid, None
-            else:
-                return None, "Process started but disappeared immediately"
-        else:
-            return None, f"Process exited with code {process.returncode}"
-            
-    except Exception as e:
-        return None, f"Failed to start API service: {str(e)}"
-
-
-def log_request():
+def log_request(request: Request):
+    """Log incoming requests"""
     user_agent = request.headers.get('User-Agent', 'unknown')
-    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+    ip_address = request.headers.get('X-Forwarded-For', str(request.client.host))
     timestamp = datetime.utcnow().isoformat()
 
     log_entry = {
         "timestamp": timestamp,
         "ip": ip_address,
         "method": request.method,
-        "path": request.path,
+        "path": str(request.url.path),
         "user_agent": user_agent,
-        "query_params": dict(request.args),
+        "query_params": dict(request.query_params),
         "headers": dict(request.headers)
     }
-    with open(log_file, 'a') as f:
-        f.write(
-            f"{timestamp} - {ip_address} - {request.method} {request.path} - {user_agent}\n")
-    with open(log_file_json, 'a') as f:
+    
+    # Write to text log
+    with open(log_file, 'a', encoding='utf-8') as f:
+        f.write(f"{timestamp} - {ip_address} - {request.method} {request.url.path} - {user_agent}\n")
+    
+    # Write to JSON log
+    with open(log_file_json, 'a', encoding='utf-8') as f:
         f.write(json.dumps(log_entry) + "\n")
 
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Middleware to log all requests"""
+    if request.url.path != '/favicon.ico':
+        log_request(request)
+    response = await call_next(request)
+    return response
 
-@app.before_request
-def before_request():
-    if request.path == '/favicon.ico':
-        return
-    log_request()
-
-
-@app.route('/config', methods=['GET'])
-def config():
-    return jsonify({
+@app.get("/config")
+async def config():
+    """Configuration endpoint"""
+    return {
         "database": {
             "host": "localhost",
             "port": 3306,
-            "username": args.username,
-            "password": args.password,
+            "username": username_config,
+            "password": password_config,
         },
-    })
+    }
 
-
-@app.route('/health', methods=['GET'])
-def health():
+@app.get("/health")
+async def health():
     """Health check endpoint"""
-    return jsonify({
+    return {
         "status": "healthy",
         "service": "api-honeypot",
         "timestamp": datetime.utcnow().isoformat(),
-        "port": args.port,
-        "username": args.username
-    })
+        "port": port_config,
+        "username": username_config
+    }
 
-
-@app.route('/', methods=['GET'])
-def root():
-    """Root endpoint to catch basic requests"""
-    return jsonify({
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
         "message": "API Honeypot Service",
         "endpoints": ["/config", "/health"],
         "timestamp": datetime.utcnow().isoformat()
-    })
+    }
 
+def start(config):
+    """Start the API honeypot service as a subprocess"""
+    try:
+        # Extract configuration
+        port = config.get('port', 8080)
+        username = config.get('username', 'james')
+        password = config.get('password', 'james')
+        
+        # Get the current script path
+        script_path = os.path.abspath(__file__)
+        python_executable = sys.executable
+        
+        # Prepare command arguments
+        cmd = [
+            python_executable,
+            script_path,
+            "--port", str(port),
+            "--username", username,
+            "--password", password
+        ]
+        
+        # Set up log file for subprocess output
+        log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs", "api")
+        os.makedirs(log_dir, exist_ok=True)
+        subprocess_log = os.path.join(log_dir, "subprocess.log")
+        
+        # Start subprocess with detached process
+        with open(subprocess_log, 'w') as log_file:
+            process = subprocess.Popen(
+                cmd,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                cwd=os.path.dirname(__file__),
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0
+            )
+        
+        print(f"API honeypot started on port {port} (PID: {process.pid})")
+        
+        # Return port as "fake PID" for tracking
+        return port
+        
+    except Exception as e:
+        print(f"Failed to start API honeypot: {e}")
+        return None
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Start the API service.')
     parser.add_argument('--port', type=int, default=8080,
                         help='Port to run the API service on.')
@@ -161,11 +141,16 @@ if __name__ == '__main__':
                         help="Password for the API service")
     args = parser.parse_args()
 
-    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+    # Set global config
+    port_config = args.port
+    username_config = args.username
+    password_config = args.password
+
+    os.makedirs(path.dirname(log_file), exist_ok=True)
 
     try:
-        app.run(host='0.0.0.0', port=args.port,
-                debug=False, use_reloader=False)
+        print(f"Starting FastAPI honeypot on port {args.port}")
+        uvicorn.run(app, host="0.0.0.0", port=args.port, log_level="error")
     except Exception as e:
         print(f"Failed to start server: {e}")
-        sys.exit(1)
+        exit(1)

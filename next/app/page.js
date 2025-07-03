@@ -1,5 +1,6 @@
 "use client"
 
+
 import React, { useState } from 'react';
 import styled, { createGlobalStyle } from 'styled-components';
 import Sidebar from './components/Sidebar';
@@ -7,6 +8,8 @@ import DashboardHeader from './components/DashboardHeader';
 import StatsCards from './components/StatsCards';
 import HoneypotList from './components/HoneypotList';
 import ConfigModal from './components/ConfigModal';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 const GlobalStyle = createGlobalStyle`
   body {
@@ -39,8 +42,9 @@ export default function Home() {
   const [stats, setStats] = useState({ total: 0, running: 0, threats: 0, blocked: 0 });
 
   // Fetch honeypots and stats from Flask API
+
   React.useEffect(() => {
-    fetch('/services/status')
+    fetch(`${API_URL}/services/status`)
       .then(r => r.json())
       .then(data => {
         setHoneypots(data.services || []);
@@ -59,6 +63,7 @@ export default function Home() {
   };
 
   // Submit config to Flask API
+
   const handleSubmitConfig = async (config) => {
     let payload = { config: { ...config, name: modal } };
     // For SSH users, parse JSON
@@ -70,7 +75,7 @@ export default function Home() {
         return;
       }
     }
-    const res = await fetch('/services/start', {
+    const res = await fetch(`${API_URL}/services/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -78,7 +83,7 @@ export default function Home() {
     if (res.ok) {
       setModal(null);
       // Optionally, refresh honeypots
-      fetch('/services/status')
+      fetch(`${API_URL}/services/status`)
         .then(r => r.json())
         .then(data => setHoneypots(data.services || []));
     } else {
