@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import Dashboard from './second';
 
 export default function ApiLogsPage() {
   const [logs, setLogs] = useState([]);
@@ -34,41 +35,41 @@ export default function ApiLogsPage() {
 
   const filteredLogs = logs.filter(log => {
     const matchesFilter = filter === 'all' || log.level?.toLowerCase() === filter;
-    
+
     // Enhanced search functionality including time-based search
     const matchesSearch = searchTerm === '' || (() => {
       const searchLower = searchTerm.toLowerCase();
-      
+
       // Basic text search
-      const textMatch = 
+      const textMatch =
         log.message?.toLowerCase().includes(searchLower) ||
         log.ip?.toLowerCase().includes(searchLower) ||
         log.method?.toLowerCase().includes(searchLower) ||
         log.endpoint?.toLowerCase().includes(searchLower) ||
         log.user_agent?.toLowerCase().includes(searchLower);
-      
+
       // Time-based search
       const timeMatch = (() => {
         if (!log.timestamp) return false;
-        
+
         const logDate = new Date(log.timestamp);
         const logDateString = logDate.toLocaleString().toLowerCase();
         const logDateOnly = logDate.toLocaleDateString().toLowerCase();
         const logTimeOnly = logDate.toLocaleTimeString().toLowerCase();
-        
+
         // Search in full timestamp, date only, or time only
         return logDateString.includes(searchLower) ||
-               logDateOnly.includes(searchLower) ||
-               logTimeOnly.includes(searchLower);
+          logDateOnly.includes(searchLower) ||
+          logTimeOnly.includes(searchLower);
       })();
-      
+
       // Date range search (e.g., "today", "yesterday", "last hour")
       const dateRangeMatch = (() => {
         if (!log.timestamp) return false;
-        
+
         const logDate = new Date(log.timestamp);
         const now = new Date();
-        
+
         switch (searchLower) {
           case 'today':
             return logDate.toDateString() === now.toDateString();
@@ -94,10 +95,10 @@ export default function ApiLogsPage() {
             return false;
         }
       })();
-      
+
       return textMatch || timeMatch || dateRangeMatch;
     })();
-    
+
     return matchesFilter && matchesSearch;
   });
 
@@ -107,12 +108,12 @@ export default function ApiLogsPage() {
     const lastHour = new Date(now - 60 * 60 * 1000);
     const last7Days = new Date(now - 7 * 24 * 60 * 60 * 1000);
     const last30Days = new Date(now - 30 * 24 * 60 * 60 * 1000);
-    
+
     const recentLogs = logs.filter(log => {
       const logTime = new Date(log.timestamp);
       return logTime > last24Hours;
     });
-    
+
     const hourlyLogs = logs.filter(log => {
       const logTime = new Date(log.timestamp);
       return logTime > lastHour;
@@ -131,11 +132,11 @@ export default function ApiLogsPage() {
     const uniqueIPs = new Set(logs.map(log => log.ip).filter(Boolean));
     const uniqueEndpoints = new Set(logs.map(log => log.endpoint).filter(Boolean));
     const uniqueUserAgents = new Set(logs.map(log => log.user_agent).filter(Boolean));
-    
+
     const topEndpoints = {};
     const topMethods = {};
     const topIPs = {};
-    
+
     logs.forEach(log => {
       if (log.endpoint) {
         topEndpoints[log.endpoint] = (topEndpoints[log.endpoint] || 0) + 1;
@@ -149,8 +150,8 @@ export default function ApiLogsPage() {
     });
 
     // Calculate attack patterns
-    const suspiciousPatterns = logs.filter(log => 
-      log.endpoint?.includes('admin') || 
+    const suspiciousPatterns = logs.filter(log =>
+      log.endpoint?.includes('admin') ||
       log.endpoint?.includes('wp-') ||
       log.endpoint?.includes('phpmyadmin') ||
       log.endpoint?.includes('..') ||
@@ -236,14 +237,14 @@ export default function ApiLogsPage() {
             Refresh
           </RefreshButton>
           <ViewModeToggle>
-            <ViewModeButton 
+            <ViewModeButton
               active={viewMode === 'list'}
               onClick={() => setViewMode('list')}
             >
               <ListIcon />
               List
             </ViewModeButton>
-            <ViewModeButton 
+            <ViewModeButton
               active={viewMode === 'grid'}
               onClick={() => setViewMode('grid')}
             >
@@ -258,7 +259,6 @@ export default function ApiLogsPage() {
           )}
         </Controls>
       </Header>
-
       <StatsBar>
         <StatItem>
           <StatLabel>Total Logs</StatLabel>
@@ -402,6 +402,7 @@ export default function ApiLogsPage() {
             </LogEntry>
           ))
         )}
+        <Dashboard/>
       </LogsContainer>
     </Container>
   );
@@ -758,3 +759,33 @@ const GridIcon = styled.span`
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Crect x='3' y='3' width='7' height='7'/%3E%3Crect x='14' y='3' width='7' height='7'/%3E%3Crect x='14' y='14' width='7' height='7'/%3E%3Crect x='3' y='14' width='7' height='7'/%3E%3C/svg%3E") center/contain no-repeat;
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Crect x='3' y='3' width='7' height='7'/%3E%3Crect x='14' y='3' width='7' height='7'/%3E%3Crect x='14' y='14' width='7' height='7'/%3E%3Crect x='3' y='14' width='7' height='7'/%3E%3C/svg%3E") center/contain no-repeat;
 `;
+
+
+
+
+export const chartDataTopCountries = {
+  labels: ['Unknown', 'Azerbaijan'],
+  datasets: [
+    {
+      label: 'Requests by Country',
+      data: [14, 1], // Counted manually from your logs
+      backgroundColor: ['#6c5ce7', '#00cec9'],
+      borderWidth: 1,
+    },
+  ],
+};
+
+
+export const chartDataThreatLevels = {
+  labels: ['Low', 'Medium'],
+  datasets: [
+    {
+      label: 'Threat Level Distribution',
+      data: [6, 9], // Based on threat_level count in logs
+      backgroundColor: ['#00b894', '#d63031'],
+      borderColor: '#fff',
+      borderWidth: 1,
+    },
+  ],
+};
+
