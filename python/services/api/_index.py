@@ -35,7 +35,7 @@ def start(config=None):
 
 
 def _start(config=None):
-    """Start the API honeypot service with given configuration"""
+    """Start the API Finance  service with given configuration"""
     if not config:
         return None, "No configuration provided"
 
@@ -96,7 +96,7 @@ def health():
     """Health check endpoint"""
     return jsonify({
         "status": "healthy",
-        "service": "api-honeypot",
+        "service": "api-finance",
         "timestamp": datetime.utcnow().isoformat(),
         "port": args.port,
         "username": args.username
@@ -107,7 +107,7 @@ def health():
 def root():
     """Root endpoint to catch basic requests"""
     return jsonify({
-        "message": "API Honeypot Service",
+        "message": "API Finance Service",
         "endpoints": ["/config", "/health"],
         "timestamp": datetime.utcnow().isoformat()
     })

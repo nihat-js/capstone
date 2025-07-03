@@ -9,7 +9,7 @@ from datetime import datetime
 from fastapi import FastAPI, Request
 from os import path, getenv
 
-app = FastAPI(title="API Honeypot Service", version="1.0.0")
+app = FastAPI(title="API Finance Service", version="1.0.0")
 
 # Global variables for configuration
 port_config = 8080
@@ -71,7 +71,7 @@ async def health():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "service": "api-honeypot",
+        "service": "api-finance",
         "timestamp": datetime.utcnow().isoformat(),
         "port": port_config,
         "username": username_config
@@ -81,13 +81,13 @@ async def health():
 async def root():
     """Root endpoint"""
     return {
-        "message": "API Honeypot Service",
+        "message": "API Finance Service",
         "endpoints": ["/config", "/health"],
         "timestamp": datetime.utcnow().isoformat()
     }
 
 def start(config):
-    """Start the API honeypot service as a subprocess"""
+    """Start the API Finance service as a subprocess"""
     try:
         # Extract configuration
         port = config.get('port', 8080)

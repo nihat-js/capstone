@@ -63,18 +63,19 @@ export default function Home() {
   };
 
   // Submit config to Flask API
-
   const handleSubmitConfig = async (config) => {
     let payload = { config: { ...config, name: modal } };
-    // For SSH users, parse JSON
+    
+    // For SSH users, parse JSON string back to array for backend
     if (modal === 'ssh' && typeof config.users === 'string') {
       try {
         payload.config.users = JSON.parse(config.users);
       } catch {
-        alert('Users must be a valid JSON array');
+        alert('Invalid user configuration');
         return;
       }
     }
+    
     const res = await fetch(`${API_URL}/services/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

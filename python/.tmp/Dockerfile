@@ -18,7 +18,8 @@ RUN echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && \
     echo 'UsePAM yes' >> /etc/ssh/sshd_config
 
 # Create users first
-RUN useradd -m admin && echo 'admin:admin123' | chpasswd && usermod -aG sudo admin && mkdir -p /home/admin/.ssh && chmod 700 /home/admin/.ssh
+RUN useradd -m james && echo 'james:james' | chpasswd && usermod -aG sudo james && mkdir -p /home/james/.ssh && chmod 700 /home/james/.ssh
+RUN useradd -m nihat && echo 'nihat:nihat' | chpasswd && mkdir -p /home/nihat/.ssh && chmod 700 /home/nihat/.ssh
 
 
 # Set file permissions

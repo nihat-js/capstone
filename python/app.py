@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import os
 import subprocess
 import sys
+import requests
 
 import services.ssh.index as ssh
 import services.api.index as api
@@ -425,20 +426,37 @@ def get_services_status():
 
         if service['type'] == 'process':
             try:
-                # Check if process is still running using psutil
-                if psutil.pid_exists(service['process_id']):
-                    proc = psutil.Process(service['process_id'])
-                    service_status['status'] = 'running'
-                    service_status['cpu_percent'] = proc.cpu_percent()
-                    service_status['memory_mb'] = round(
-                        proc.memory_info().rss / 1024 / 1024, 2)
-                    service_status['create_time'] = datetime.fromtimestamp(
-                        proc.create_time()).isoformat()
+                # Special handling for API service (uses port as fake PID)
+                if service['name'] == 'api':
+                    # Check if API service is running by making a health check
+                    import requests
+                    try:
+                        port = service.get('config', {}).get('port', service['process_id'])
+                        response = requests.get(f"http://localhost:{port}/health", timeout=2)
+                        if response.status_code == 200:
+                            service_status['status'] = 'running'
+                            service_status['health_check'] = 'passed'
+                        else:
+                            service_status['status'] = 'stopped'
+                            service_status['health_check'] = 'failed'
+                    except requests.exceptions.RequestException:
+                        service_status['status'] = 'stopped'
+                        service_status['health_check'] = 'failed'
                 else:
-                    service_status['status'] = 'stopped'
-                    # Remove from tracking if stopped
-                    if service['name'] in running_processes:
-                        del running_processes[service['name']]
+                    # Check if process is still running using psutil
+                    if psutil.pid_exists(service['process_id']):
+                        proc = psutil.Process(service['process_id'])
+                        service_status['status'] = 'running'
+                        service_status['cpu_percent'] = proc.cpu_percent()
+                        service_status['memory_mb'] = round(
+                            proc.memory_info().rss / 1024 / 1024, 2)
+                        service_status['create_time'] = datetime.fromtimestamp(
+                            proc.create_time()).isoformat()
+                    else:
+                        service_status['status'] = 'stopped'
+                        # Remove from tracking if stopped
+                        if service['name'] in running_processes:
+                            del running_processes[service['name']]
             except psutil.NoSuchProcess:
                 service_status['status'] = 'stopped'
                 if service['name'] in running_processes:
