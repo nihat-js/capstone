@@ -96,7 +96,7 @@ export default function Home() {
     <>
       <GlobalStyle />
       <Layout>
-        <Sidebar onSelect={setSelected} selected={selected} />
+        <Sidebar />
         <Main>
           <DashboardHeader />
           <Content>

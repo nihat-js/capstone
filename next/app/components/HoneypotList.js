@@ -190,11 +190,17 @@ const ActiveHoneypot = styled.div`
   border-radius: 16px;
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   font-size: 1.04rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
+  gap: 16px;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
   
   &:hover {
     transform: translateY(-2px);
@@ -210,26 +216,78 @@ const HoneypotInfo = styled.div`
 `;
 
 const HoneypotType = styled.div`
-  background: linear-gradient(135deg, #2563eb, #1e40af);
+  background: ${props => {
+    const serviceName = props.service?.toLowerCase();
+    if (serviceName === 'api') return 'linear-gradient(135deg, #3b82f6, #1d4ed8)';
+    if (serviceName === 'mysql') return 'linear-gradient(135deg, #f59e0b, #d97706)';
+    if (serviceName === 'ssh') return 'linear-gradient(135deg, #10b981, #059669)';
+    if (serviceName === 'postgres') return 'linear-gradient(135deg, #8b5cf6, #7c3aed)';
+    if (serviceName === 'redis') return 'linear-gradient(135deg, #ef4444, #dc2626)';
+    if (serviceName === 'phpmyadmin') return 'linear-gradient(135deg, #f97316, #ea580c)';
+    return 'linear-gradient(135deg, #64748b, #475569)';
+  }};
   color: white;
   padding: 8px 16px;
   border-radius: 20px;
   font-weight: 700;
   font-size: 0.9rem;
   letter-spacing: 0.5px;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
+  &::before {
+    content: '${props => {
+      const serviceName = props.service?.toLowerCase();
+      if (serviceName === 'api') return '💳';
+      if (serviceName === 'mysql') return '🗄️';
+      if (serviceName === 'ssh') return '🔐';
+      if (serviceName === 'postgres') return '🐘';
+      if (serviceName === 'redis') return '📦';
+      if (serviceName === 'phpmyadmin') return '🔧';
+      return '⚙️';
+    }}';
+    font-size: 1rem;
+  }
+`;
+
+const ServiceInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const ServiceDetail = styled.div`
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
+  
+  span {
+    font-weight: 600;
+    color: #475569;
+  }
 `;
 
 const PortInfo = styled.div`
   font-weight: 600;
   color: #334155;
   font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  
+  &::before {
+    content: '🔌';
+    font-size: 1rem;
+  }
 `;
 
 const StatusContainer = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 `;
 
 const Status = styled.div`
@@ -343,16 +401,41 @@ export default function HoneypotList({ honeypots, onDeploy }) {
         </EmptyState>
       ) : (
         honeypots.map(h => (
-          <ActiveHoneypot key={h.id || `${h.type}-${h.port}`}>
+          <ActiveHoneypot key={h.container_id || h.process_id || `${h.name}-${h.config?.port}`}>
             <HoneypotInfo>
-              <HoneypotType>{h.type?.toUpperCase() || 'UNKNOWN'}</HoneypotType>
-              <PortInfo>Port {h.port}</PortInfo>
+              <HoneypotType service={h.name}>{h.name?.toUpperCase() || 'UNKNOWN'}</HoneypotType>
+              <ServiceInfo>
+                <PortInfo>Port {h.config?.port || 'N/A'}</PortInfo>
+                <ServiceDetail>
+                  <span>Type:</span> {h.type === 'docker' ? 'Docker Container' : 'Process'}
+                </ServiceDetail>
+                {h.type === 'docker' && h.container_id && (
+                  <ServiceDetail>
+                    <span>Container:</span> {h.container_id.slice(0, 12)}...
+                  </ServiceDetail>
+                )}
+                {h.type === 'process' && h.process_id && (
+                  <ServiceDetail>
+                    <span>PID:</span> {h.process_id}
+                  </ServiceDetail>
+                )}
+              </ServiceInfo>
             </HoneypotInfo>
             <StatusContainer>
               <Status status={h.status === 'running' ? 'running' : 'stopped'}>
                 <StatusDot status={h.status === 'running' ? 'running' : 'stopped'} />
                 {h.status === 'running' ? 'Running' : 'Stopped'}
               </Status>
+              {h.status === 'running' && h.cpu_percent !== undefined && (
+                <ServiceDetail style={{ fontSize: '0.8rem', margin: 0 }}>
+                  <span>CPU:</span> {h.cpu_percent.toFixed(1)}%
+                </ServiceDetail>
+              )}
+              {h.status === 'running' && h.memory_mb !== undefined && (
+                <ServiceDetail style={{ fontSize: '0.8rem', margin: 0 }}>
+                  <span>RAM:</span> {h.memory_mb}MB
+                </ServiceDetail>
+              )}
               <ActionButton>
                 {h.status === 'running' ? 'Stop' : 'Start'}
               </ActionButton>
