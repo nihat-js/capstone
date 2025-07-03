@@ -374,14 +374,9 @@ export default function SettingsPage() {
         </Header>
 
         <Content>
-          <Sidebar>
-            <SidebarHeader>
-              <SidebarTitle>Categories</SidebarTitle>
-              <SettingsCount>{filteredSections.length} sections</SettingsCount>
-            </SidebarHeader>
-            
+          <TabNavigation>
             {filteredSections.map(section => (
-              <SidebarItem 
+              <TabItem 
                 key={section.id}
                 active={activeSection === section.id}
                 onClick={() => setActiveSection(section.id)}
@@ -389,17 +384,16 @@ export default function SettingsPage() {
               >
                 <SectionIcon>{section.icon}</SectionIcon>
                 <SectionTitle>{section.title}</SectionTitle>
-                {activeSection === section.id && <ActiveIndicator />}
-              </SidebarItem>
+              </TabItem>
             ))}
-          </Sidebar>
+          </TabNavigation>
 
           <MainContent>
             {activeSection === 'general' && (
               <Section>
                 <SectionHeader>
                   <SectionHeaderContent>
-                    <SectionTitle>⚙️ General Settings</SectionTitle>
+                    <SectionHeaderTitle>⚙️ General Settings</SectionHeaderTitle>
                     <SectionDescription>Basic application preferences and behavior configuration</SectionDescription>
                   </SectionHeaderContent>
                   <SectionBadge>Core</SectionBadge>
@@ -508,7 +502,7 @@ export default function SettingsPage() {
               <Section>
                 <SectionHeader>
                   <SectionHeaderContent>
-                    <SectionTitle>🎨 Appearance Settings</SectionTitle>
+                    <SectionHeaderTitle>🎨 Appearance Settings</SectionHeaderTitle>
                     <SectionDescription>Customize the visual appearance and layout of your interface</SectionDescription>
                   </SectionHeaderContent>
                   <SectionBadge style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}>Visual</SectionBadge>
@@ -593,7 +587,7 @@ export default function SettingsPage() {
               <Section>
                 <SectionHeader>
                   <SectionHeaderContent>
-                    <SectionTitle>🔔 Notification Settings</SectionTitle>
+                    <SectionHeaderTitle>🔔 Notification Settings</SectionHeaderTitle>
                     <SectionDescription>Configure how you receive alerts and updates</SectionDescription>
                   </SectionHeaderContent>
                   <SectionBadge style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>Alerts</SectionBadge>
@@ -684,7 +678,7 @@ export default function SettingsPage() {
               <Section>
                 <SectionHeader>
                   <SectionHeaderContent>
-                    <SectionTitle>📊 Dashboard Settings</SectionTitle>
+                    <SectionHeaderTitle>📊 Dashboard Settings</SectionHeaderTitle>
                     <SectionDescription>Customize your dashboard layout and display options</SectionDescription>
                   </SectionHeaderContent>
                   <SectionBadge style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>Display</SectionBadge>
@@ -780,7 +774,7 @@ export default function SettingsPage() {
               <Section>
                 <SectionHeader>
                   <SectionHeaderContent>
-                    <SectionTitle>🔒 Security Settings</SectionTitle>
+                    <SectionHeaderTitle>🔒 Security Settings</SectionHeaderTitle>
                     <SectionDescription>Configure security and authentication options</SectionDescription>
                   </SectionHeaderContent>
                   <SectionBadge style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)' }}>Critical</SectionBadge>
@@ -873,7 +867,7 @@ export default function SettingsPage() {
               <Section>
                 <SectionHeader>
                   <SectionHeaderContent>
-                    <SectionTitle>🌐 Network Settings</SectionTitle>
+                    <SectionHeaderTitle>🌐 Network Settings</SectionHeaderTitle>
                     <SectionDescription>Configure network connectivity and proxy settings</SectionDescription>
                   </SectionHeaderContent>
                   <SectionBadge style={{ background: 'linear-gradient(135deg, #06b6d4, #0891b2)' }}>Network</SectionBadge>
@@ -962,7 +956,7 @@ export default function SettingsPage() {
               <Section>
                 <SectionHeader>
                   <SectionHeaderContent>
-                    <SectionTitle>🔧 Advanced Settings</SectionTitle>
+                    <SectionHeaderTitle>🔧 Advanced Settings</SectionHeaderTitle>
                     <SectionDescription>Technical configuration for power users and system optimization</SectionDescription>
                   </SectionHeaderContent>
                   <SectionBadge style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}>Expert</SectionBadge>
@@ -1355,87 +1349,64 @@ const SaveButton = styled.button`
 `;
 
 const Content = styled.div`
-  display: grid;
-  grid-template-columns: 320px 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 32px;
   min-height: calc(100vh - 200px);
 `;
 
-const Sidebar = styled.div`
+const TabNavigation = styled.div`
+  display: flex;
+  gap: 8px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
-  border-radius: 24px;
-  padding: 24px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  padding: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  height: fit-content;
-  position: sticky;
-  top: 32px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  
+  &::-webkit-scrollbar {
+    display: none;
+  }
 `;
 
-const SidebarHeader = styled.div`
-  padding: 0 4px 16px 4px;
-  border-bottom: 2px solid #f1f5f9;
-  margin-bottom: 16px;
-`;
-
-const SidebarTitle = styled.h3`
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0 0 4px 0;
-`;
-
-const SettingsCount = styled.p`
-  font-size: 0.85rem;
-  color: #64748b;
-  margin: 0;
-  font-weight: 500;
-`;
-
-const SidebarItem = styled.div`
+const TabItem = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
-  border-radius: 16px;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 14px;
   cursor: pointer;
   transition: all 0.3s ease;
-  margin-bottom: 8px;
-  position: relative;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 0.9rem;
   
   ${props => props.active ? `
     background: linear-gradient(135deg, ${props.color || '#667eea'} 0%, ${props.color || '#764ba2'} 100%);
     color: white;
-    transform: scale(1.02);
-    box-shadow: 0 10px 25px ${props.color || '#667eea'}40;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px ${props.color || '#667eea'}40;
   ` : `
+    color: #64748b;
     &:hover {
-      background: linear-gradient(135deg, ${props.color || '#667eea'}15, ${props.color || '#764ba2'}15);
-      transform: translateX(4px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      background: linear-gradient(135deg, ${props.color || '#667eea'}10, ${props.color || '#764ba2'}10);
+      color: #475569;
+      transform: translateY(-1px);
     }
   `}
 `;
 
 const SectionIcon = styled.span`
-  font-size: 1.3rem;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  font-size: 1.1rem;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 `;
 
 const SectionTitle = styled.span`
   font-weight: 600;
-  font-size: 1rem;
-  flex: 1;
-`;
-
-const ActiveIndicator = styled.div`
-  width: 8px;
-  height: 8px;
-  background: white;
-  border-radius: 50%;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
-  animation: pulse 2s ease infinite;
+  font-size: 0.9rem;
 `;
 
 const MainContent = styled.div`
@@ -1447,6 +1418,7 @@ const MainContent = styled.div`
   border: 1px solid rgba(255, 255, 255, 0.2);
   position: relative;
   overflow: hidden;
+  width: 100%;
 `;
 
 const Section = styled.div`
@@ -1486,6 +1458,16 @@ const SectionHeader = styled.div`
 `;
 
 const SectionHeaderContent = styled.div``;
+
+const SectionHeaderTitle = styled.h2`
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
 
 const SectionDescription = styled.p`
   color: #64748b;
