@@ -64,6 +64,8 @@ def start(config):
                 "mysql", "-u", "root", "-p" + root_password, "-e", """
                 USE backup_2024;
                 INSERT INTO users (username, password) VALUES ('james', 'james');
+                INSERT INTO users (username, password) VALUES ('marcos', 'Salam123');
+                INSERT INTO users (username, password) VALUES ('guillermo', 'MyFriend123');
                 """
             ]
             subprocess.run(insert_user_cmd)
