@@ -2,141 +2,105 @@ import styled from 'styled-components';
 
 
 const ListContainer = styled.div`
-  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-  border-radius: 24px;
-  box-shadow: 
-    0 20px 40px -12px rgba(0, 0, 0, 0.15),
-    0 0 0 1px rgba(255, 255, 255, 0.8);
-  padding: 48px;
-  margin-top: 32px;
-  border: 2px solid rgba(99, 102, 241, 0.1);
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  margin-top: 24px;
+  border: 1px solid #e5e7eb;
 `;
 
 const Title = styled.div`
-  font-size: 1.5rem;
-  font-weight: 900;
-  margin-bottom: 32px;
-  color: #0f172a;
-  letter-spacing: -0.5px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 24px;
+  color: #111827;
+  letter-spacing: -0.025em;
 `;
 
 const DeploySection = styled.div`
-  margin-bottom: 48px;
+  margin-bottom: 32px;
 `;
 
 const CardsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 24px;
-  margin-bottom: 32px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+  
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const DeployCard = styled.div`
-  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-  border-radius: 20px;
-  padding: 32px;
-  border: 2px solid transparent;
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid #e5e7eb;
   cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   position: relative;
-  overflow: hidden;
   
-  ${props => {
-    if (props.type === 'api') return `
-      border-color: rgba(59, 130, 246, 0.2);
-      &:hover {
-        border-color: #3b82f6;
-        transform: translateY(-8px) scale(1.02);
-        box-shadow: 0 25px 50px -12px rgba(59, 130, 246, 0.3);
-      }
-    `;
-    if (props.type === 'mysql') return `
-      border-color: rgba(245, 158, 11, 0.2);
-      &:hover {
-        border-color: #f59e0b;
-        transform: translateY(-8px) scale(1.02);
-        box-shadow: 0 25px 50px -12px rgba(245, 158, 11, 0.3);
-      }
-    `;
-    if (props.type === 'ssh') return `
-      border-color: rgba(16, 185, 129, 0.2);
-      &:hover {
-        border-color: #10b981;
-        transform: translateY(-8px) scale(1.02);
-        box-shadow: 0 25px 50px -12px rgba(16, 185, 129, 0.3);
-      }
-    `;
-  }}
-  
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: ${props => {
-      if (props.type === 'api') return 'linear-gradient(90deg, #3b82f6, #1d4ed8)';
-      if (props.type === 'mysql') return 'linear-gradient(90deg, #f59e0b, #d97706)';
-      if (props.type === 'ssh') return 'linear-gradient(90deg, #10b981, #059669)';
+  &:hover {
+    border-color: ${props => {
+      if (props.type === 'api') return '#3b82f6';
+      if (props.type === 'mysql') return '#f59e0b';
+      if (props.type === 'ssh') return '#10b981';
     }};
-    transform: scaleX(0);
-    transition: transform 0.3s ease;
-  }
-  
-  &:hover::before {
-    transform: scaleX(1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
   }
 `;
 
 const CardIcon = styled.div`
-  width: 64px;
-  height: 64px;
-  border-radius: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 20px;
-  font-size: 28px;
+  margin-bottom: 16px;
+  font-size: 20px;
   background: ${props => {
-    if (props.type === 'api') return 'linear-gradient(135deg, #3b82f6, #1d4ed8)';
-    if (props.type === 'mysql') return 'linear-gradient(135deg, #f59e0b, #d97706)';
-    if (props.type === 'ssh') return 'linear-gradient(135deg, #10b981, #059669)';
+    if (props.type === 'api') return '#3b82f6';
+    if (props.type === 'mysql') return '#f59e0b';
+    if (props.type === 'ssh') return '#10b981';
   }};
   color: white;
-  box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.3);
 `;
 
 const CardTitle = styled.h3`
-  font-size: 1.4rem;
-  font-weight: 800;
-  margin: 0 0 12px 0;
-  color: #0f172a;
-  letter-spacing: -0.3px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: #111827;
 `;
 
 const CardDescription = styled.p`
-  color: #64748b;
-  font-size: 1rem;
-  line-height: 1.6;
-  margin: 0 0 20px 0;
-  font-weight: 500;
+  color: #6b7280;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  margin: 0 0 16px 0;
 `;
 
 const CardFeatures = styled.ul`
   list-style: none;
   padding: 0;
-  margin: 0 0 24px 0;
+  margin: 0 0 20px 0;
 `;
 
 const Feature = styled.li`
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #475569;
-  font-size: 0.9rem;
-  margin-bottom: 8px;
-  font-weight: 500;
+  color: #6b7280;
+  font-size: 0.8rem;
+  margin-bottom: 6px;
   
   &::before {
     content: '✓';
@@ -145,31 +109,30 @@ const Feature = styled.li`
       if (props.type === 'mysql') return '#f59e0b';
       if (props.type === 'ssh') return '#10b981';
     }};
-    font-weight: 700;
-    font-size: 1rem;
+    font-weight: 600;
+    font-size: 0.75rem;
   }
 `;
 
 const DeployButton = styled.button`
   width: 100%;
   background: ${props => {
-    if (props.type === 'api') return 'linear-gradient(135deg, #3b82f6, #1d4ed8)';
-    if (props.type === 'mysql') return 'linear-gradient(135deg, #f59e0b, #d97706)';
-    if (props.type === 'ssh') return 'linear-gradient(135deg, #10b981, #059669)';
+    if (props.type === 'api') return '#3b82f6';
+    if (props.type === 'mysql') return '#f59e0b';
+    if (props.type === 'ssh') return '#10b981';
   }};
   color: white;
   border: none;
-  border-radius: 12px;
-  padding: 16px 24px;
-  font-size: 1.1rem;
-  font-weight: 700;
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-size: 0.875rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s ease;
-  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
   
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 35px -8px rgba(0, 0, 0, 0.3);
+    opacity: 0.9;
+    transform: translateY(-1px);
   }
   
   &:active {
@@ -184,17 +147,16 @@ const EmptyState = styled.div`
 `;
 
 const ActiveHoneypot = styled.div`
-  margin: 18px 0;
-  padding: 24px;
-  border: 2px solid #e5e7eb;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  margin: 12px 0;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  font-size: 1.04rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
   gap: 16px;
   
   @media (max-width: 768px) {
@@ -203,9 +165,8 @@ const ActiveHoneypot = styled.div`
   }
   
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-    border-color: #cbd5e1;
+    border-color: #d1d5db;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 `;
 
@@ -218,24 +179,23 @@ const HoneypotInfo = styled.div`
 const HoneypotType = styled.div`
   background: ${props => {
     const serviceName = props.service?.toLowerCase();
-    if (serviceName === 'api') return 'linear-gradient(135deg, #3b82f6, #1d4ed8)';
-    if (serviceName === 'mysql') return 'linear-gradient(135deg, #f59e0b, #d97706)';
-    if (serviceName === 'ssh') return 'linear-gradient(135deg, #10b981, #059669)';
-    if (serviceName === 'postgres') return 'linear-gradient(135deg, #8b5cf6, #7c3aed)';
-    if (serviceName === 'redis') return 'linear-gradient(135deg, #ef4444, #dc2626)';
-    if (serviceName === 'phpmyadmin') return 'linear-gradient(135deg, #f97316, #ea580c)';
-    return 'linear-gradient(135deg, #64748b, #475569)';
+    if (serviceName === 'api') return '#3b82f6';
+    if (serviceName === 'mysql') return '#f59e0b';
+    if (serviceName === 'ssh') return '#10b981';
+    if (serviceName === 'postgres') return '#8b5cf6';
+    if (serviceName === 'redis') return '#ef4444';
+    if (serviceName === 'phpmyadmin') return '#f97316';
+    return '#6b7280';
   }};
   color: white;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-weight: 700;
-  font-size: 0.9rem;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 0.75rem;
+  letter-spacing: 0.025em;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   
   &::before {
     content: '${props => {
@@ -248,7 +208,7 @@ const HoneypotType = styled.div`
       if (serviceName === 'phpmyadmin') return '🔧';
       return '⚙️';
     }}';
-    font-size: 1rem;
+    font-size: 0.875rem;
   }
 `;
 
@@ -259,27 +219,27 @@ const ServiceInfo = styled.div`
 `;
 
 const ServiceDetail = styled.div`
-  font-size: 0.85rem;
-  color: #64748b;
-  font-weight: 500;
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 400;
   
   span {
-    font-weight: 600;
-    color: #475569;
+    font-weight: 500;
+    color: #374151;
   }
 `;
 
 const PortInfo = styled.div`
-  font-weight: 600;
-  color: #334155;
-  font-size: 1.1rem;
+  font-weight: 500;
+  color: #111827;
+  font-size: 0.875rem;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   
   &::before {
     content: '🔌';
-    font-size: 1rem;
+    font-size: 0.75rem;
   }
 `;
 
@@ -293,26 +253,24 @@ const StatusContainer = styled.div`
 const Status = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-weight: 600;
-  font-size: 0.9rem;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 0.75rem;
   
   ${props => props.status === 'running' ? `
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: #10b981;
     color: white;
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
   ` : `
-    background: linear-gradient(135deg, #ef4444, #dc2626);
+    background: #ef4444;
     color: white;
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
   `}
 `;
 
 const StatusDot = styled.div`
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: currentColor;
   animation: ${props => props.status === 'running' ? 'pulse 2s infinite' : 'none'};
@@ -325,17 +283,18 @@ const StatusDot = styled.div`
 `;
 
 const ActionButton = styled.button`
-  padding: 8px 16px;
-  border: 2px solid #e5e7eb;
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
   background: white;
-  border-radius: 8px;
-  font-weight: 600;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.75rem;
   cursor: pointer;
   transition: all 0.2s;
   
   &:hover {
-    border-color: #cbd5e1;
-    background: #f8fafc;
+    border-color: #9ca3af;
+    background: #f9fafb;
   }
 `;
 

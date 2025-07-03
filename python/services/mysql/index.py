@@ -5,15 +5,8 @@ import uuid
 import os
 from os import path, getenv
 from datetime import datetime
-# config = {
-#     name="mysql_simple",
-#     port=3307,
-#     root_password="root",
-#     user="testuser",
-#     user_password="testpass"
-# }
 
-log_dir = path.abspath(path.join(getenv("log_dir","../../logs"),"mysql"))
+log_dir = path.abspath(path.join(getenv("log_dir", "../../logs"), "mysql"))
 os.makedirs(log_dir, exist_ok=True)
 
 def start(config):
@@ -40,6 +33,41 @@ def start(config):
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode == 0:
             container_id = result.stdout.strip()
+
+            # Wait for MySQL to fully initialize
+            time.sleep(140)
+            print("executing commands in container...")
+
+            # Docker exec to create the database and table
+            create_db_cmd = [
+                "docker", "exec", container_id,
+                "mysql", "-u", "root", "-p" + root_password, "-e", "CREATE DATABASE backup_2024;"
+            ]
+            subprocess.run(create_db_cmd)
+
+            create_table_cmd = [
+                "docker", "exec", container_id,
+                "mysql", "-u", "root", "-p" + root_password, "-e", """
+                USE backup_2024;
+                CREATE TABLE users (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    username VARCHAR(255) NOT NULL,
+                    password VARCHAR(255) NOT NULL
+                );
+                """
+            ]
+            subprocess.run(create_table_cmd)
+
+            # Insert 'james' user into the 'users' table
+            insert_user_cmd = [
+                "docker", "exec", container_id,
+                "mysql", "-u", "root", "-p" + root_password, "-e", """
+                USE backup_2024;
+                INSERT INTO users (username, password) VALUES ('james', 'james');
+                """
+            ]
+            subprocess.run(insert_user_cmd)
+
             return container_id, None
         else:
             return None, f"Failed to start MySQL: {result.stderr}"
@@ -48,8 +76,6 @@ def start(config):
 
 # Example usage
 if __name__ == "__main__":
-    import sys
-    
     # Start honeypot mode
     config = {
         "name": "mysql_honeypot",
@@ -63,4 +89,3 @@ if __name__ == "__main__":
         print(f"🌐 Connection: mysql://root:admin123@localhost:3307")
     else:
         print(f"Failed to start: {error}")
-
