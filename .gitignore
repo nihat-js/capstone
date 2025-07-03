@@ -1,5 +1,5 @@
 __pycache__
-logs/
+python/logs/
 node_modules
 __pycache__
 uploads
@@ -8,3 +8,4 @@ build/
 .env
 *.log
 tmp/
+.next
